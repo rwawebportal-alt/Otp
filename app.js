@@ -1,25 +1,24 @@
 // =========================================================
 // RWA PAID TEST SERIES APP - DASHBOARD, BOOKMARKS & OTP AUTH (app.js)
-// FULL-SCREEN PDF VIEWER + 100% CUSTOM POPUPS (ZERO WEBVIEW URL DIALOG)
+// FULL-SCREEN PDF VIEWER + 100% CUSTOM POPUPS + ZERO CORS ERROR OTP LOGIN
 // =========================================================
 
 const BOT_API_BASE = "https://rwaweb-hp11.onrender.com";
 const API_BASE = "https://rozgarapinew.teachx.in";
 const AES_KEY = CryptoJS.enc.Utf8.parse("638udh3829162018");
 
-// Exposing PROXY URL Globally for tcs-engine
+// Exposing PROXY URLs Globally for tcs-engine & CORS fallback
 window.WORKER_RAW_PROXY = "https://proplayer.allswbatch22.workers.dev/proxy?url=";
+const RWA_DEDICATED_WORKER = "https://test.src22420.workers.dev/?url=";
 
 const TG_BOT_TOKEN = "8832643385:AAG5SZyJo7dDrvvK_dO_2pEOQK09OLeA6WM"; 
 const TG_CHANNEL_ID = "-1004454849047";
 
-// Official RWA Web Headers from Logs ([19:30:57])
-const RWA_WEB_HEADERS = {
+// CORS-Safe Official RWA Headers (Prevents Preflight Rejection on GitHub Pages)
+const RWA_CORS_SAFE_HEADERS = {
     "Client-Service": "Appx",
     "Auth-Key": "appxapi",
-    "source": "website",
-    "Device-Type": "",
-    "is-safari": "0"
+    "source": "website"
 };
 
 // =====================================================
@@ -462,17 +461,50 @@ window.downloadAndUploadPDF = async function(pdfUrl, title) {
     }
 };
 
-function extractUidFromJwt(jwtStr) {
-    if (!jwtStr || typeof jwtStr !== "string") return "";
+function decodeJwtPayloadObject(jwtStr) {
+    if (!jwtStr || typeof jwtStr !== "string") return null;
     try {
         const parts = jwtStr.trim().split(".");
-        if (parts.length < 2) return "";
-        const base64Url = parts[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
-        const payload = JSON.parse(jsonPayload);
-        return String(payload.id || payload.userid || payload.user_id || "");
-    } catch { return ""; }
+        if (parts.length < 2) return null;
+        const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split("")
+                .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+                .join("")
+        );
+        return JSON.parse(jsonPayload);
+    } catch {
+        return null;
+    }
+}
+
+function extractUidFromJwt(jwtStr) {
+    const payload = decodeJwtPayloadObject(jwtStr);
+    if (!payload) return "";
+    if (payload.id || payload.userid || payload.user_id) {
+        return String(payload.id || payload.userid || payload.user_id);
+    }
+    if (payload.session) {
+        const nested = decodeJwtPayloadObject(payload.session);
+        if (nested && (nested.id || nested.userid || nested.user_id)) {
+            return String(nested.id || nested.userid || nested.user_id);
+        }
+    }
+    return "";
+}
+
+// Extracts embedded user details from RWA JWT session token (as found in Logs [19:30:57])
+function extractSessionUserFromJwt(jwtStr) {
+    const outer = decodeJwtPayloadObject(jwtStr);
+    if (!outer) return {};
+    const inner = outer.session ? (decodeJwtPayloadObject(outer.session) || {}) : {};
+    return {
+        id: String(outer.id || inner.id || ""),
+        userid: String(outer.id || inner.id || ""),
+        name: inner.name || outer.name || "",
+        email: inner.email || outer.email || ""
+    };
 }
 
 function getUserSavedTokens() { try { const raw = localStorage.getItem("rwa_user_tokens_v2"); if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) return parsed.filter(t => t && t.token && !t.isAdmin); } } catch {} return []; }
@@ -692,7 +724,7 @@ window.switchAppTab = function(tabName) {
 };
 
 // =====================================================
-// 🚀 OFFICIAL RWA OTP LOGIN MODAL & MONGODB SYNC ENGINE
+// 🚀 2-SLIDE OTP LOGIN MODAL, 4-DIGIT BOX HANDLER & API ENGINE
 // =====================================================
 let otpResendTimerInterval = null;
 let lastOtpTargetPhone = "";
@@ -718,36 +750,110 @@ function closeLoginModal() {
 }
 window.closeLoginModal = closeLoginModal;
 
+function clearOtpDigitBoxes() {
+    for (let i = 0; i < 4; i++) {
+        const box = document.getElementById(`otpDigit${i}`);
+        if (box) box.value = "";
+    }
+    const hiddenInput = document.getElementById("loginOtpInput");
+    if (hiddenInput) hiddenInput.value = "";
+}
+
+function getCombinedOtpFromBoxes() {
+    let combined = "";
+    for (let i = 0; i < 4; i++) {
+        const box = document.getElementById(`otpDigit${i}`);
+        if (box) combined += String(box.value || "").replace(/\D/g, "");
+    }
+    const hiddenInput = document.getElementById("loginOtpInput");
+    if (hiddenInput) hiddenInput.value = combined;
+    return combined;
+}
+
+window.handleOtpBoxInput = function(idx, inputEl) {
+    const val = String(inputEl.value || "").replace(/\D/g, "");
+    inputEl.value = val ? val.slice(-1) : "";
+    getCombinedOtpFromBoxes();
+    if (inputEl.value && idx < 3) {
+        const nextBox = document.getElementById(`otpDigit${idx + 1}`);
+        if (nextBox) nextBox.focus();
+    }
+};
+
+window.handleOtpBoxKeydown = function(idx, event) {
+    if (event.key === "Backspace") {
+        const curBox = document.getElementById(`otpDigit${idx}`);
+        if (curBox && !curBox.value && idx > 0) {
+            const prevBox = document.getElementById(`otpDigit${idx - 1}`);
+            if (prevBox) {
+                prevBox.value = "";
+                prevBox.focus();
+                getCombinedOtpFromBoxes();
+                event.preventDefault();
+            }
+        }
+    } else if (event.key === "ArrowLeft" && idx > 0) {
+        document.getElementById(`otpDigit${idx - 1}`)?.focus();
+    } else if (event.key === "ArrowRight" && idx < 3) {
+        document.getElementById(`otpDigit${idx + 1}`)?.focus();
+    } else if (event.key === "Enter") {
+        verifyLoginOtp();
+    }
+};
+
+window.handleOtpPaste = function(event) {
+    try {
+        const pasted = (event.clipboardData || window.clipboardData).getData("text") || "";
+        const digits = pasted.replace(/\D/g, "").slice(0, 4);
+        if (!digits) return;
+        event.preventDefault();
+        for (let i = 0; i < 4; i++) {
+            const box = document.getElementById(`otpDigit${i}`);
+            if (box) box.value = digits[i] || "";
+        }
+        getCombinedOtpFromBoxes();
+        const focusIdx = Math.min(digits.length, 3);
+        document.getElementById(`otpDigit${focusIdx}`)?.focus();
+    } catch {}
+};
+
 window.resetOtpModalToPhoneStep = function() {
     if (otpResendTimerInterval) clearInterval(otpResendTimerInterval);
     const stepPhone = document.getElementById("otpStepPhoneBox");
     const stepVerify = document.getElementById("otpStepVerifyBox");
-    const otpInput = document.getElementById("loginOtpInput");
+    const backBtn = document.getElementById("otpBackArrowBtn");
     const alertBox = document.getElementById("loginStatusAlert");
     if (stepPhone) stepPhone.classList.remove("hidden");
     if (stepVerify) stepVerify.classList.add("hidden");
-    if (otpInput) otpInput.value = "";
+    if (backBtn) backBtn.classList.add("hidden");
+    clearOtpDigitBoxes();
     if (alertBox) alertBox.classList.add("hidden");
 };
 
-function startOtpResendCountdown(seconds = 30) {
+function startOtpResendCountdown(seconds = 119) {
     if (otpResendTimerInterval) clearInterval(otpResendTimerInterval);
-    const timerText = document.getElementById("otpTimerText");
+    const countdownEl = document.getElementById("otpTimerCountdown");
     const resendBtn = document.getElementById("btnResendOtp");
     let remaining = seconds;
 
     const updateUI = () => {
-        if (!timerText || !resendBtn) return;
-        if (remaining > 0) {
-            timerText.textContent = `Resend available in ${remaining}s`;
-            resendBtn.disabled = true;
-            resendBtn.style.opacity = "0.45";
-            resendBtn.style.pointerEvents = "none";
-        } else {
-            timerText.textContent = "OTP nahi mila?";
-            resendBtn.disabled = false;
-            resendBtn.style.opacity = "1";
-            resendBtn.style.pointerEvents = "auto";
+        if (countdownEl) {
+            const mins = String(Math.floor(Math.max(0, remaining) / 60)).padStart(2, "0");
+            const secs = String(Math.max(0, remaining) % 60).padStart(2, "0");
+            countdownEl.textContent = `${mins}:${secs}`;
+        }
+        if (resendBtn) {
+            if (remaining > 90) {
+                resendBtn.disabled = true;
+                resendBtn.style.opacity = "0.45";
+                resendBtn.style.pointerEvents = "none";
+            } else {
+                resendBtn.disabled = false;
+                resendBtn.style.opacity = "1";
+                resendBtn.style.pointerEvents = "auto";
+            }
+        }
+        if (remaining <= 0) {
             clearInterval(otpResendTimerInterval);
         }
     };
@@ -761,21 +867,82 @@ function startOtpResendCountdown(seconds = 30) {
 
 function showLoginStatus(msg, type) {
     const alertBox = document.getElementById("loginStatusAlert"); if (!alertBox) return;
-    alertBox.classList.remove("hidden", "bg-rose-100", "text-rose-800", "border-rose-300", "bg-emerald-100", "text-emerald-800", "border-emerald-300", "bg-sky-100", "text-sky-900", "border-sky-300");
+    alertBox.classList.remove("hidden", "bg-rose-100", "text-rose-800", "border-rose-300", "bg-emerald-100", "text-emerald-800", "border-emerald-300", "bg-purple-100", "text-purple-900", "border-purple-300");
     alertBox.classList.add("border");
     if (type === "error") alertBox.classList.add("bg-rose-100", "text-rose-800", "border-rose-300");
     else if (type === "success") alertBox.classList.add("bg-emerald-100", "text-emerald-800", "border-emerald-300");
-    else alertBox.classList.add("bg-sky-100", "text-sky-900", "border-sky-300");
+    else alertBox.classList.add("bg-purple-100", "text-purple-900", "border-purple-300");
     alertBox.innerHTML = msg;
 }
 
-// Fetch user profile using exact headers from Logs ([19:30:57] /get/get_user_dt?userid=...)
+// Multi-Layer API Caller for OTP (Direct CORS-Safe + Cloudflare Worker Fallback)
+async function callRwaAuthEndpoint(endpoint, method = "GET", formParams = null) {
+    const targetFullUrl = `${API_BASE}${endpoint}`;
+
+    // Layer 1: Direct Fetch with CORS-Safe Standard Headers (No device-type/is-safari preflight block)
+    try {
+        const headers = { ...RWA_CORS_SAFE_HEADERS };
+        const fetchOpts = { method, headers };
+        if (method === "POST" && formParams) {
+            headers["Content-Type"] = "application/x-www-form-urlencoded";
+            fetchOpts.body = formParams.toString();
+        }
+        const res = await fetch(targetFullUrl, fetchOpts);
+        if (res.ok) {
+            const json = await res.json();
+            if (json) return json;
+        }
+    } catch {}
+
+    // Layer 2: Direct Fetch with User-ID Header
+    try {
+        const headers = { ...RWA_CORS_SAFE_HEADERS, "User-ID": "-1" };
+        const fetchOpts = { method, headers };
+        if (method === "POST" && formParams) {
+            headers["Content-Type"] = "application/x-www-form-urlencoded";
+            fetchOpts.body = formParams.toString();
+        }
+        const res = await fetch(targetFullUrl, fetchOpts);
+        if (res.ok) {
+            const json = await res.json();
+            if (json) return json;
+        }
+    } catch {}
+
+    // Layer 3: Via Dedicated RWA Cloudflare Worker Proxy (Bypasses Browser CORS 100%)
+    if (method === "GET") {
+        try {
+            const cookieStr = `base_url=${encodeURIComponent(API_BASE + "/")}`;
+            const workerUrl = `${RWA_DEDICATED_WORKER}${encodeURIComponent(targetFullUrl)}&cookie=${encodeURIComponent(cookieStr)}&base_url=${encodeURIComponent(API_BASE + "/")}`;
+            const res = await fetch(workerUrl);
+            if (res.ok) {
+                const json = await res.json();
+                if (json) return json;
+            }
+        } catch {}
+
+        // Layer 4: Via Secondary Raw Worker Proxy
+        if (window.WORKER_RAW_PROXY) {
+            try {
+                const res = await fetch(window.WORKER_RAW_PROXY + encodeURIComponent(targetFullUrl));
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json) return json;
+                }
+            } catch {}
+        }
+    }
+
+    return null;
+}
+
+// Fetch user profile using `/get/get_user_dt?userid=...` from Logs ([19:30:57])
 async function fetchUserDetailsFromServer(jwtToken, userId) {
     const uid = userId || extractUidFromJwt(jwtToken);
     if (!jwtToken || !uid) return null;
     const tempTokObj = { token: jwtToken, userId: String(uid) };
     const json = await fetchRawJSONWithToken(`/get/get_user_dt?userid=${encodeURIComponent(uid)}`, tempTokObj);
-    if (json && json.status === 200 && Array.isArray(json.data) && json.data.length > 0) return json.data[0];
+    if (json && Number(json.status) === 200 && Array.isArray(json.data) && json.data.length > 0) return json.data[0];
     return null;
 }
 
@@ -806,9 +973,11 @@ function processPendingBotSync() {
     trySend();
 }
 
-// Request OTP from RWA AppX Server
+// Request OTP from RWA Server (Supports Direct + Proxy Fallback)
 async function requestOtpFromRwaServer(phone) {
     const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
+    let lastServerMsg = "";
+
     const getEndpoints = [
         `/get/send_login_otp?phone=${encodeURIComponent(cleanPhone)}`,
         `/get/otplogin?phone=${encodeURIComponent(cleanPhone)}`,
@@ -816,121 +985,137 @@ async function requestOtpFromRwaServer(phone) {
     ];
 
     for (const ep of getEndpoints) {
-        try {
-            const res = await fetch(`${API_BASE}${ep}`, {
-                method: "GET",
-                headers: { ...RWA_WEB_HEADERS }
-            });
-            const json = await res.json();
-            if (json && (Number(json.status) === 200 || /otp|sent|success/i.test(String(json.message || json.msg || "")))) {
-                return { ok: true, message: json.message || json.msg || "OTP Sent Successfully" };
+        const json = await callRwaAuthEndpoint(ep, "GET");
+        if (json) {
+            const msg = String(json.message || json.msg || "");
+            if (Number(json.status) === 200 || json.status === true || /otp|sent|sended|success/i.test(msg)) {
+                return { ok: true, message: msg || "OTP Sent Successfully" };
             }
-        } catch {}
+            if (msg) lastServerMsg = msg;
+        }
     }
 
-    const postEndpoints = ["/post/send_login_otp", "/post/otplogin", "/post/send_otp"];
+    const postEndpoints = ["/post/send_login_otp", "/post/otplogin"];
     for (const ep of postEndpoints) {
-        try {
-            const formData = new URLSearchParams();
-            formData.append("phone", cleanPhone);
-            formData.append("username", cleanPhone);
-            const res = await fetch(`${API_BASE}${ep}`, {
-                method: "POST",
-                headers: { ...RWA_WEB_HEADERS, "Content-Type": "application/x-www-form-urlencoded" },
-                body: formData.toString()
-            });
-            const json = await res.json();
-            if (json && (Number(json.status) === 200 || /otp|sent|success/i.test(String(json.message || json.msg || "")))) {
-                return { ok: true, message: json.message || json.msg || "OTP Sent Successfully" };
+        const formData = new URLSearchParams();
+        formData.append("phone", cleanPhone);
+        formData.append("username", cleanPhone);
+        const json = await callRwaAuthEndpoint(ep, "POST", formData);
+        if (json) {
+            const msg = String(json.message || json.msg || "");
+            if (Number(json.status) === 200 || json.status === true || /otp|sent|sended|success/i.test(msg)) {
+                return { ok: true, message: msg || "OTP Sent Successfully" };
             }
-        } catch {}
+            if (msg) lastServerMsg = msg;
+        }
     }
 
-    return { ok: false, message: "OTP bhejne mein error aaya ya yeh mobile number RWA par registered nahi hai." };
+    return {
+        ok: false,
+        message: lastServerMsg || "Server se OTP bhejne mein samasya aayi. Kripya apna registered number check karein."
+    };
 }
 
-// Verify OTP on RWA AppX Server and retrieve JWT Token + User ID
+// Extract token and user object from any RWA OTP verification response structure
+function extractAuthFromVerifyResponse(json) {
+    if (!json || typeof json !== "object") return null;
+    const isOk = Number(json.status) === 200 || json.status === true || Boolean(json.user) || Boolean(json.token) || Boolean(json.jwt);
+    if (!isOk) return null;
+
+    const candidates = [
+        json.user,
+        Array.isArray(json.data) ? json.data[0] : json.data,
+        json.result,
+        json
+    ].filter(c => c && typeof c === "object");
+
+    for (const c of candidates) {
+        const tok = c.token || c.jwt || c.auth_token || c.access_token || json.token || json.jwt || "";
+        if (tok && typeof tok === "string" && tok.length > 10) {
+            const jwtSessionUser = extractSessionUserFromJwt(tok);
+            const uid = String(
+                c.userid || c.id || c.user_id ||
+                json.userid || json.id || json.user_id ||
+                jwtSessionUser.id ||
+                extractUidFromJwt(tok) || ""
+            ).trim();
+            return {
+                ...jwtSessionUser,
+                ...c,
+                token: tok.trim(),
+                userid: uid
+            };
+        }
+    }
+    return null;
+}
+
+// Verify OTP on RWA Server
 async function verifyOtpOnRwaServer(phone, otp) {
     const cleanPhone = String(phone).replace(/\D/g, "").slice(-10);
     const cleanOtp = String(otp).trim();
 
-    const extractAuthFromResponse = (json) => {
-        if (!json || Number(json.status) !== 200) return null;
-        const d = (Array.isArray(json.data) ? json.data[0] : json.data) || json;
-        const token = d.token || d.jwt || json.token || json.jwt || "";
-        if (!token) return null;
-        const userid = String(d.userid || d.id || json.userid || extractUidFromJwt(token) || "");
-        return { ...d, token, userid };
-    };
-
     const getVerifyEndpoints = [
         `/get/verify_login_otp?username=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&device_type=WEB&mydeviceid=&extra_details=1`,
-        `/get/verify_login_otp?username=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&device_type=WEB&mydeviceid=`,
-        `/get/verify_login_otp?phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&device_type=WEB&mydeviceid=`,
-        `/get/otp_verify?username=${encodeURIComponent(cleanPhone)}&phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}`,
-        `/get/user_login_with_otp?phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}`
+        `/get/verify_login_otp?username=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&mydeviceid=&extra_details=1`,
+        `/get/verify_login_otp?username=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}`,
+        `/get/verify_login_otp?phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&device_type=WEB&mydeviceid=&extra_details=1`,
+        `/get/otp_verify?username=${encodeURIComponent(cleanPhone)}&phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}`
     ];
 
     for (const ep of getVerifyEndpoints) {
-        try {
-            const res = await fetch(`${API_BASE}${ep}`, {
-                method: "GET",
-                headers: { ...RWA_WEB_HEADERS }
-            });
-            const json = await res.json();
-            const extracted = extractAuthFromResponse(json);
-            if (extracted) return extracted;
-        } catch {}
+        const json = await callRwaAuthEndpoint(ep, "GET");
+        const extracted = extractAuthFromVerifyResponse(json);
+        if (extracted) return extracted;
     }
 
-    const postVerifyEndpoints = ["/post/verify_login_otp", "/post/otp_verify", "/post/userLogin"];
+    const postVerifyEndpoints = ["/post/verify_login_otp", "/post/otp_verify"];
     for (const ep of postVerifyEndpoints) {
-        try {
-            const formData = new URLSearchParams();
-            formData.append("username", cleanPhone);
-            formData.append("phone", cleanPhone);
-            formData.append("otp", cleanOtp);
-            formData.append("device_type", "WEB");
-            formData.append("mydeviceid", "");
-            formData.append("devicetoken", "");
-            formData.append("extra_details", "1");
+        const formData = new URLSearchParams();
+        formData.append("username", cleanPhone);
+        formData.append("phone", cleanPhone);
+        formData.append("otp", cleanOtp);
+        formData.append("device_type", "WEB");
+        formData.append("mydeviceid", "");
+        formData.append("devicetoken", "");
+        formData.append("extra_details", "1");
 
-            const res = await fetch(`${API_BASE}${ep}`, {
-                method: "POST",
-                headers: { ...RWA_WEB_HEADERS, "Content-Type": "application/x-www-form-urlencoded" },
-                body: formData.toString()
-            });
-            const json = await res.json();
-            const extracted = extractAuthFromResponse(json);
-            if (extracted) return extracted;
-        } catch {}
+        const json = await callRwaAuthEndpoint(ep, "POST", formData);
+        const extracted = extractAuthFromVerifyResponse(json);
+        if (extracted) return extracted;
     }
 
     return null;
 }
 
+function formatIndianPhoneDisplay(phone10) {
+    const s = String(phone10).replace(/\D/g, "").slice(-10);
+    if (s.length === 10) return `+91 ${s.slice(0, 5)} ${s.slice(5)}`;
+    return `+91 ${s}`;
+}
+
 window.sendLoginOtp = async function(isResend = false) {
     const phoneInput = document.getElementById("loginPhoneInput");
-    const rawPhone = phoneInput ? phoneInput.value.trim() : lastOtpTargetPhone;
+    const rawPhone = (phoneInput && phoneInput.value.trim()) ? phoneInput.value.trim() : lastOtpTargetPhone;
     const cleanPhone = String(rawPhone).replace(/\D/g, "").slice(-10);
 
     if (!cleanPhone || cleanPhone.length !== 10) {
-        showLoginStatus("⚠️ Kripya apna 10-digit RWA Registered Mobile Number dalein.", "error");
+        showLoginStatus("⚠️ कृपया अपना 10 अंकों का RWA रजिस्टर्ड मोबाइल नंबर दर्ज करें।", "error");
         return;
     }
 
     const sendBtn = document.getElementById("btnSendOtp");
     if (sendBtn) {
         sendBtn.disabled = true;
-        sendBtn.textContent = "🔄 Sending OTP...";
+        sendBtn.innerHTML = `<span>🔄 OTP भेजा जा रहा है...</span>`;
     }
 
-    showLoginStatus(`🔄 +91 ${cleanPhone} par OTP bheja ja raha hai...`, "info");
+    showLoginStatus(`🔄 +91 ${cleanPhone} पर OTP भेजा जा रहा है...`, "info");
     const result = await requestOtpFromRwaServer(cleanPhone);
 
     if (sendBtn) {
         sendBtn.disabled = false;
-        sendBtn.textContent = "📲 Send OTP ➔";
+        sendBtn.innerHTML = `<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg><span>OTP भेजें</span>`;
     }
 
     if (!result.ok) {
@@ -940,66 +1125,70 @@ window.sendLoginOtp = async function(isResend = false) {
 
     lastOtpTargetPhone = cleanPhone;
     const sentDisplay = document.getElementById("otpSentPhoneDisplay");
-    if (sentDisplay) sentDisplay.textContent = `+91 ${cleanPhone}`;
+    if (sentDisplay) sentDisplay.textContent = formatIndianPhoneDisplay(cleanPhone);
 
+    // Switch from Slide 1 (Phone) to Slide 2 (OTP Verification)
     document.getElementById("otpStepPhoneBox").classList.add("hidden");
     document.getElementById("otpStepVerifyBox").classList.remove("hidden");
+    document.getElementById("otpBackArrowBtn")?.classList.remove("hidden");
 
-    const otpInput = document.getElementById("loginOtpInput");
-    if (otpInput) {
-        otpInput.value = "";
-        setTimeout(() => otpInput.focus(), 100);
-    }
+    clearOtpDigitBoxes();
+    setTimeout(() => document.getElementById("otpDigit0")?.focus(), 120);
 
-    startOtpResendCountdown(30);
-    showLoginStatus(isResend ? `✅ OTP dobara +91 ${cleanPhone} par bhej diya gaya hai!` : `✅ OTP aapke mobile number +91 ${cleanPhone} par bhej diya gaya hai!`, "success");
+    startOtpResendCountdown(119);
+    showLoginStatus(
+        isResend
+            ? `✅ OTP दोबारा ${formatIndianPhoneDisplay(cleanPhone)} पर भेज दिया गया है!`
+            : `✅ आपके नंबर ${formatIndianPhoneDisplay(cleanPhone)} पर OTP भेज दिया गया है!`,
+        "success"
+    );
 };
 
 window.verifyLoginOtp = async function() {
     const phone = lastOtpTargetPhone || (document.getElementById("loginPhoneInput")?.value || "").replace(/\D/g, "").slice(-10);
-    const otpInput = document.getElementById("loginOtpInput");
-    const otp = otpInput ? otpInput.value.trim() : "";
+    const otp = getCombinedOtpFromBoxes();
 
     if (!phone || phone.length !== 10) {
         resetOtpModalToPhoneStep();
-        showLoginStatus("⚠️ Kripya pehle apna 10-digit Mobile Number dalein.", "error");
+        showLoginStatus("⚠️ कृपया पहले अपना 10 अंकों का मोबाइल नंबर दर्ज करें।", "error");
         return;
     }
 
     if (!otp || otp.length < 4) {
-        showLoginStatus("⚠️ Kripya mobile par aaya hua valid OTP dalein.", "error");
+        showLoginStatus("⚠️ कृपया अपने नंबर पर आया 4 अंकों का OTP दर्ज करें।", "error");
         return;
     }
 
     const verifyBtn = document.getElementById("btnVerifyOtp");
     if (verifyBtn) {
         verifyBtn.disabled = true;
-        verifyBtn.textContent = "🔄 Verifying OTP...";
+        verifyBtn.innerHTML = `<span>🔄 सत्यापित किया जा रहा है...</span>`;
     }
 
-    showLoginStatus("🔄 RWA Server se OTP verify kiya ja raha hai...", "info");
+    showLoginStatus("🔄 RWA सर्वर से OTP सत्यापित किया जा रहा है...", "info");
     const loginData = await verifyOtpOnRwaServer(phone, otp);
 
     if (!loginData || !loginData.token) {
         if (verifyBtn) {
             verifyBtn.disabled = false;
-            verifyBtn.textContent = "✅ Verify OTP & Unlock Tests ➔";
+            verifyBtn.innerHTML = `<span>➔</span><span>लॉगिन करें</span>`;
         }
-        showLoginStatus("❌ Invalid ya Expired OTP! Kripya sahi OTP dalein.", "error");
+        showLoginStatus("❌ गलत या एक्सपायर्ड OTP! कृपया सही 4 अंकों का OTP दर्ज करें।", "error");
         return;
     }
 
     const token = loginData.token;
-    const uid = String(loginData.userid || loginData.id || extractUidFromJwt(token));
+    const jwtUser = extractSessionUserFromJwt(token);
+    const uid = String(loginData.userid || loginData.id || jwtUser.id || extractUidFromJwt(token));
 
-    showLoginStatus("🔄 OTP Verified! Server se aapki Profile Details fetch ho rahi hain...", "info");
+    showLoginStatus("🔄 OTP सत्यापित! आपकी प्रोफ़ाइल लोड हो रही है...", "info");
     let userDetails = await fetchUserDetailsFromServer(token, uid);
     if (!userDetails) {
         userDetails = {
             id: uid,
             userid: uid,
-            name: loginData.name || `Student #${uid}`,
-            email: loginData.email || "N/A",
+            name: loginData.name || jwtUser.name || `Student #${uid}`,
+            email: loginData.email || jwtUser.email || "N/A",
             phone: loginData.phone || phone,
             username: loginData.username || phone,
             state: loginData.state || "N/A",
@@ -1033,11 +1222,11 @@ window.verifyLoginOtp = async function() {
 
     if (verifyBtn) {
         verifyBtn.disabled = false;
-        verifyBtn.textContent = "✅ Verify OTP & Unlock Tests ➔";
+        verifyBtn.innerHTML = `<span>➔</span><span>लॉगिन करें</span>`;
     }
 
-    showLoginStatus(`✅ Welcome ${userDetails.name || "User"}! OTP Login Successful.`, "success");
-    setTimeout(completePostLoginFlow, 500);
+    showLoginStatus(`✅ स्वागत है ${userDetails.name || "Student"}! लॉगिन सफल रहा।`, "success");
+    setTimeout(completePostLoginFlow, 450);
 };
 
 function completePostLoginFlow() {
@@ -1060,7 +1249,7 @@ async function openProfileModal() {
     const contentBox = document.getElementById("profileDetailsContent"), footerBox = document.getElementById("profileFooterActions");
 
     if (!isUserLoggedIn()) {
-        contentBox.innerHTML = `<div class="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-5 text-center"><div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-md mb-2.5">📲</div><h4 class="font-black text-base text-slate-900">Aap abhi Logged In nahi hain</h4><p class="text-xs font-semibold text-slate-600 mt-1">Sabhi Paid Tests attempt karne aur apni Profile dekhne ke liye apne Mobile Number aur OTP se Login karein.</p><div class="flex flex-wrap justify-center gap-2.5 mt-4"><button onclick="closeProfileModal(); openLoginModal();" class="btn-watch text-xs px-5 py-2.5">📲 Login with OTP</button></div></div>`;
+        contentBox.innerHTML = `<div class="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-5 text-center"><div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-md mb-2.5">📲</div><h4 class="font-black text-base text-slate-900">Aap abhi Logged In nahi hain</h4><p class="text-xs font-semibold text-slate-600 mt-1">Sabhi Paid Tests attempt karne aur apni Profile dekhne ke liye apne RWA Registered Mobile Number par OTP se Login karein.</p><div class="flex flex-wrap justify-center gap-2.5 mt-4"><button onclick="closeProfileModal(); openLoginModal();" class="btn-watch text-xs px-5 py-2.5">📲 Official Login</button></div></div>`;
         if (footerBox) footerBox.innerHTML = `<button onclick="closeProfileModal()" class="btn-nav bg-slate-900 text-white border-0 ml-auto">Close</button>`; return;
     }
 
@@ -1199,7 +1388,7 @@ function handleGlobalBack() {
 window.handleGlobalBack = handleGlobalBack;
 
 // =====================================================
-// API CALLER (MATCHES EXACT HEADERS FROM LOGS [19:30:57])
+// API CALLER (CORS-SAFE HEADERS + WORKER FALLBACK)
 // =====================================================
 async function fetchRawJSONWithToken(endpoint, tokenObj) {
     const statusBadge = document.getElementById("apiStatus");
@@ -1209,7 +1398,7 @@ async function fetchRawJSONWithToken(endpoint, tokenObj) {
 
     try {
         const headers = {
-            ...RWA_WEB_HEADERS,
+            ...RWA_CORS_SAFE_HEADERS,
             "User-ID": resolvedUid
         };
         if (authToken) headers["Authorization"] = authToken;
@@ -1218,6 +1407,18 @@ async function fetchRawJSONWithToken(endpoint, tokenObj) {
         if (statusBadge) statusBadge.textContent = `● Live Server Connected`;
         return json;
     } catch {
+        // Fallback via Dedicated Cloudflare Worker if direct CORS is blocked
+        try {
+            const cookieStr = `base_url=${encodeURIComponent(API_BASE + "/")}; Authorization=${authToken}; User-ID=${resolvedUid}`;
+            const workerUrl = `${RWA_DEDICATED_WORKER}${encodeURIComponent(API_BASE + endpoint)}&cookie=${encodeURIComponent(cookieStr)}&token=${encodeURIComponent(authToken)}&uid=${encodeURIComponent(resolvedUid)}&base_url=${encodeURIComponent(API_BASE + "/")}`;
+            const wRes = await fetch(workerUrl);
+            if (wRes.ok) {
+                const wJson = await wRes.json();
+                if (statusBadge) statusBadge.textContent = `● Live Server Connected`;
+                return wJson;
+            }
+        } catch {}
+
         if (statusBadge) statusBadge.textContent = "● Smart Hybrid Mode";
         return null;
     }
@@ -1370,13 +1571,13 @@ function renderTestTitlesGrid(list, tsId, boundTok) {
 }
 
 window.launchCbtTest = async function(tKey) {
-    if (!isUserLoggedIn()) { window.state.pendingTestKey = tKey; openLoginModal("📲 Test start karne ke liye pehle apne Mobile Number aur OTP se Login karein!"); return; }
+    if (!isUserLoggedIn()) { window.state.pendingTestKey = tKey; openLoginModal(); return; }
     if (window.state.testMap[tKey]) window.state.testMap[tKey].tokenObj = window.USER_TOKENS[0];
     if (typeof window.launchTcsCbtEngine === "function") await window.launchTcsCbtEngine(tKey);
 };
 
 window.openTestPdf = function(tKey) {
-    if (!isUserLoggedIn()) { window.state.pendingPdfKey = tKey; openLoginModal("📲 Test PDF dekhne ke liye pehle OTP se Login karein!"); return; }
+    if (!isUserLoggedIn()) { window.state.pendingPdfKey = tKey; openLoginModal(); return; }
     const t = window.state.testMap[tKey]; if (!t || !t.resolvedPdf) return;
     window.state.currentPdfUrl = t.resolvedPdf;
     const titleEl = document.getElementById("pdfTitle");
