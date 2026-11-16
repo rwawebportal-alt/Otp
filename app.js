@@ -979,7 +979,7 @@ async function requestOtpFromRwaServer(phone) {
     let lastServerMsg = "";
 
     const getEndpoints = [
-        `/get/send_login_otp?phone=${encodeURIComponent(cleanPhone)}`,
+        `/get/sendotp?phone=${encodeURIComponent(cleanPhone)}`,
         `/get/otplogin?phone=${encodeURIComponent(cleanPhone)}`,
         `/get/resend_otp?phone=${encodeURIComponent(cleanPhone)}`
     ];
