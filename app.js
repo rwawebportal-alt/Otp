@@ -1056,11 +1056,11 @@ async function verifyOtpOnRwaServer(phone, otp) {
     const cleanOtp = String(otp).trim();
 
     const getVerifyEndpoints = [
-        `/get/verify_login_otp?username=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&device_type=WEB&mydeviceid=&extra_details=1`,
+        `/get/otpverify?useremail=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&device_type=WEB&mydeviceid=&extra_details=1`,
         `/get/verify_login_otp?username=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&mydeviceid=&extra_details=1`,
         `/get/verify_login_otp?username=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}`,
         `/get/verify_login_otp?phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}&device_type=WEB&mydeviceid=&extra_details=1`,
-        `/get/otp_verify?username=${encodeURIComponent(cleanPhone)}&phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}`
+        `/get/otpverify?useremail=${encodeURIComponent(cleanPhone)}&phone=${encodeURIComponent(cleanPhone)}&otp=${encodeURIComponent(cleanOtp)}`
     ];
 
     for (const ep of getVerifyEndpoints) {
