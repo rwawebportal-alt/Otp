@@ -214,6 +214,64 @@
         @keyframes rwaSpin {
             to { transform: rotate(360deg); }
         }
+
+        /* =====================================================
+           PREMIUM 2-SLIDE OTP LOGIN PORTAL (IMAGE 2 EXACT UI)
+           ===================================================== */
+        .rwa-auth-card {
+            background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 42%, #f5f3ff 100%);
+            border: 3px solid #ffffff;
+            border-radius: 34px;
+            box-shadow: 0 25px 60px -12px rgba(88, 28, 135, 0.45);
+            position: relative;
+            overflow: hidden;
+        }
+        .rwa-purple-btn {
+            background: linear-gradient(90deg, #9333ea 0%, #6d28d9 55%, #4c1d95 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 10px 22px -5px rgba(109, 40, 217, 0.5);
+            transition: transform 0.15s ease, filter 0.15s ease;
+        }
+        .rwa-purple-btn:hover {
+            filter: brightness(1.06);
+        }
+        .rwa-purple-btn:active {
+            transform: scale(0.97);
+        }
+        .rwa-purple-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+        .rwa-otp-digit-box {
+            width: 58px;
+            height: 58px;
+            border-radius: 15px;
+            border: 2px solid #d8b4fe;
+            background: #ffffff;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 900;
+            color: #1e1b4b;
+            outline: none;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+            transition: all 0.18s ease;
+        }
+        .rwa-otp-digit-box:focus {
+            border-color: #6d28d9;
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
+            transform: translateY(-2px);
+        }
+        .rwa-slide-anim {
+            animation: rwaSlideFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes rwaSlideFade {
+            from { opacity: 0; transform: translateX(18px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
     </style>
 
     <!-- GLOBAL WEBVIEW NATIVE DIALOG BLOCKER (RUNS BEFORE ALL SCRIPTS) -->
@@ -725,7 +783,7 @@
                             <div class="fs-q-txt" id="fs-q-txt">Q Text</div>
                             <div id="fs-options-container"></div>
                             <div class="fs-exp-title">💡 Official Full Solution</div>
-                            <div class="fs-exp-text" id="fs-exp-text">Explanation</div>
+                            <div id="fs-exp-text" id="fs-exp-text">Explanation</div>
                         </div>
                     </div>
                     <div class="fs-bottom-bar">
@@ -745,60 +803,169 @@
 
     </main>
 
-    <!-- LOGIN MODAL (OFFICIAL RWA MOBILE NUMBER + OTP LOGIN ONLY) -->
-    <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-sky-300 animate-slideInSmooth">
-            <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-white font-black text-base shadow">📲</div>
+    <!-- =================================================================
+         LOGIN MODAL (EXACT IMAGE-2 STYLE: 2 SEPARATE SLIDES FOR NUMBER & OTP)
+         ================================================================= -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3.5 hidden">
+        <div class="rwa-auth-card max-w-[390px] w-full animate-slideInSmooth">
+
+            <!-- TOP FLOATING NAVIGATION BUTTONS (BACK ON SLIDE 2 + CLOSE) -->
+            <button id="otpBackArrowBtn" type="button" onclick="resetOtpModalToPhoneStep()" class="hidden absolute top-4 left-4 z-20 w-9 h-9 rounded-full bg-white shadow-md border border-purple-100 flex items-center justify-center text-slate-800 font-black text-base cursor-pointer hover:bg-purple-50 transition-all" title="Back">
+                ←
+            </button>
+            <button id="closeLoginModalBtn" type="button" onclick="closeLoginModal()" class="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/90 shadow-md border border-purple-100 flex items-center justify-center text-slate-500 hover:text-slate-800 font-black text-sm cursor-pointer transition-all" title="Close">
+                ✕
+            </button>
+
+            <!-- TOP ACADEMIC PORTAL EMBLEM & BRAND HEADER -->
+            <div class="pt-6 pb-2 px-6 text-center relative">
+                <!-- Graduation Cap & Book SVG Emblem -->
+                <div class="mx-auto w-28 h-16 flex items-center justify-center mb-1">
+                    <svg viewBox="0 0 160 95" class="w-full h-full drop-shadow-sm">
+                        <defs>
+                            <linearGradient id="rwaCapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#1e1b4b"/>
+                                <stop offset="100%" stop-color="#4338ca"/>
+                            </linearGradient>
+                            <linearGradient id="rwaBookGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#9333ea"/>
+                                <stop offset="100%" stop-color="#2563eb"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Laurel Wreath Left & Right -->
+                        <path d="M28 75 C16 60 16 36 28 20" stroke="#9333ea" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/>
+                        <path d="M132 75 C144 60 144 36 132 20" stroke="#9333ea" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/>
+                        <!-- Open Book Arcs -->
+                        <path d="M38 72 Q60 55 80 68 Q100 55 122 72" stroke="url(#rwaBookGrad)" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+                        <path d="M32 78 L128 78" stroke="#1e3a8a" stroke-width="4" stroke-linecap="round"/>
+                        <!-- Graduation Cap -->
+                        <polygon points="80,8 38,26 80,42 122,26" fill="url(#rwaCapGrad)"/>
+                        <path d="M56 35 L56 50 Q80 60 104 50 L104 35" fill="#312e81"/>
+                        <line x1="112" y1="30" x2="112" y2="52" stroke="#4338ca" stroke-width="2.5"/>
+                        <circle cx="112" cy="54" r="3" fill="#9333ea"/>
+                    </svg>
+                </div>
+
+                <!-- TEST PORTAL Badge Row -->
+                <div class="flex items-center justify-center gap-1.5">
+                    <span class="text-xl font-black italic tracking-tight text-slate-900">TEST</span>
+                    <span class="px-3 py-0.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-lg font-black italic tracking-wide shadow-sm">PORTAL</span>
+                </div>
+                <p class="text-[11px] font-extrabold text-slate-600 mt-1 tracking-wide">Online Test Series &nbsp;|&nbsp; Notes &nbsp;|&nbsp; PDF</p>
+            </div>
+
+            <!-- DECORATIVE PURPLE WAVE DIVIDER -->
+            <div class="w-full overflow-hidden leading-none -mt-1">
+                <svg viewBox="0 0 500 55" preserveAspectRatio="none" class="w-full h-7">
+                    <path d="M0,35 C150,65 330,-5 500,25 L500,55 L0,55 Z" fill="#ddd6fe" opacity="0.65"></path>
+                    <path d="M0,45 C180,10 340,60 500,20 L500,55 L0,55 Z" fill="#a855f7" opacity="0.35"></path>
+                </svg>
+            </div>
+
+            <!-- STATUS ALERT BANNER -->
+            <div class="px-6 pt-2">
+                <div id="loginStatusAlert" class="hidden mb-2 p-3 rounded-2xl text-xs font-extrabold text-center shadow-sm"></div>
+            </div>
+
+            <!-- =========================================================
+                 SLIDE 1: MOBILE NUMBER INPUT SLIDE (SEPARATE SLIDE 1)
+                 ========================================================= -->
+            <div id="otpStepPhoneBox" class="px-6 pt-2 pb-6 space-y-4 rwa-slide-anim">
+                <div class="text-center">
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tight">Official Login</h3>
+                    <p class="text-xs font-extrabold text-slate-600 mt-1">RWA registered number par OTP bheja jayega</p>
+                </div>
+
+                <!-- Phone Input Box -->
+                <div class="bg-white border-2 border-purple-200 focus-within:border-purple-600 rounded-2xl px-3.5 py-3 flex items-center gap-2.5 shadow-sm transition-all">
+                    <span class="text-lg leading-none select-none">📱</span>
+                    <span class="font-extrabold text-sm text-slate-800 flex items-center gap-1 select-none">+91 <span class="text-[10px] text-slate-500">▼</span></span>
+                    <span class="h-5 w-[1.5px] bg-slate-200"></span>
+                    <input id="loginPhoneInput" type="tel" maxlength="10" inputmode="numeric" placeholder="मोबाइल नंबर दर्ज करें" onkeydown="if(event.key==='Enter') sendLoginOtp()" class="w-full bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-400 placeholder:font-semibold outline-none">
+                </div>
+
+                <!-- Send OTP Button -->
+                <button id="btnSendOtp" type="button" onclick="sendLoginOtp()" class="rwa-purple-btn w-full py-3.5 text-base flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    <span>OTP भेजें</span>
+                </button>
+
+                <!-- 3 Feature Mini-Cards at Bottom -->
+                <div class="grid grid-cols-3 gap-2.5 pt-2">
+                    <div class="bg-white border border-purple-100 rounded-2xl p-2.5 text-center shadow-sm">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto mb-1 text-base font-black">☑️</div>
+                        <div class="text-[11px] font-extrabold text-slate-800 leading-tight">टेस्ट सीरीज़</div>
+                    </div>
+                    <div class="bg-white border border-purple-100 rounded-2xl p-2.5 text-center shadow-sm">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto mb-1 text-base font-black">📄</div>
+                        <div class="text-[11px] font-extrabold text-slate-800 leading-tight">नोट्स / PDF</div>
+                    </div>
+                    <div class="bg-white border border-purple-100 rounded-2xl p-2.5 text-center shadow-sm">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto mb-1 text-base font-black">🏆</div>
+                        <div class="text-[11px] font-extrabold text-slate-800 leading-tight">परिणाम विश्लेषण</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 SLIDE 2: 4-BOX OTP VERIFICATION SLIDE (SEPARATE SLIDE 2)
+                 ========================================================= -->
+            <div id="otpStepVerifyBox" class="px-6 pt-2 pb-6 space-y-4 hidden rwa-slide-anim">
+                <div class="text-center">
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tight">OTP सत्यापन</h3>
+                    <p class="text-xs font-extrabold text-slate-600 mt-1">आपके नंबर पर भेजा गया 4 अंकों का OTP दर्ज करें</p>
+                </div>
+
+                <!-- Phone Display Pill + Change Button -->
+                <div class="bg-purple-100/75 border border-purple-200 rounded-full px-4 py-2.5 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-sm">📱</span>
+                        <span id="otpSentPhoneDisplay" class="font-black text-sm text-slate-900 truncate">+91 98765 43210</span>
+                    </div>
+                    <button type="button" onclick="resetOtpModalToPhoneStep()" class="flex items-center gap-1 text-purple-700 hover:text-purple-900 font-extrabold text-xs bg-transparent border-0 cursor-pointer shrink-0">
+                        <span>✎</span>
+                        <span>बदलें</span>
+                    </button>
+                </div>
+
+                <!-- 4 Individual OTP Digit Boxes -->
+                <div class="flex items-center justify-center gap-3 pt-1">
+                    <input id="otpDigit0" type="tel" maxlength="1" inputmode="numeric" autocomplete="one-time-code" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(0, this)" onkeydown="handleOtpBoxKeydown(0, event)" onpaste="handleOtpPaste(event)">
+                    <input id="otpDigit1" type="tel" maxlength="1" inputmode="numeric" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(1, this)" onkeydown="handleOtpBoxKeydown(1, event)" onpaste="handleOtpPaste(event)">
+                    <input id="otpDigit2" type="tel" maxlength="1" inputmode="numeric" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(2, this)" onkeydown="handleOtpBoxKeydown(2, event)" onpaste="handleOtpPaste(event)">
+                    <input id="otpDigit3" type="tel" maxlength="1" inputmode="numeric" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(3, this)" onkeydown="handleOtpBoxKeydown(3, event)" onpaste="handleOtpPaste(event)">
+                </div>
+
+                <!-- Hidden fallback input for compatibility -->
+                <input id="loginOtpInput" type="hidden">
+
+                <!-- OTP Validity Countdown & Resend Row -->
+                <div class="text-center space-y-1">
+                    <div class="inline-flex items-center gap-1.5 text-xs font-extrabold text-slate-600">
+                        <span>🕒</span>
+                        <span id="otpTimerLabelText">OTP मान्य है:</span>
+                        <span id="otpTimerCountdown" class="text-purple-700 font-black">01:59</span>
+                    </div>
                     <div>
-                        <h3 class="font-black text-lg text-slate-900 leading-none">RWA Official OTP Login</h3>
-                        <p class="text-[11px] font-bold text-rose-600 mt-0.5">● Test Start karne ke liye OTP se Login karein</p>
+                        <button id="btnResendOtp" type="button" onclick="sendLoginOtp(true)" class="text-xs font-extrabold text-purple-700 hover:text-purple-900 underline bg-transparent border-0 cursor-pointer">
+                            🔄 OTP दोबारा भेजें (Resend OTP)
+                        </button>
                     </div>
                 </div>
-                <button id="closeLoginModalBtn" onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-700 font-black text-lg cursor-pointer bg-transparent border-0">✕</button>
+
+                <!-- Verify & Login Button -->
+                <button id="btnVerifyOtp" type="button" onclick="verifyLoginOtp()" class="rwa-purple-btn w-full py-3.5 text-base flex items-center justify-center gap-2">
+                    <span>➔</span>
+                    <span>लॉगिन करें</span>
+                </button>
             </div>
 
-            <div class="bg-sky-50 px-3.5 py-2 rounded-2xl border border-sky-200 mb-4 flex items-center justify-between">
-                <span class="font-extrabold text-xs text-blue-800">📱 Mobile Number OTP Verification</span>
-                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">SECURE</span>
-            </div>
-
-            <div id="loginStatusAlert" class="hidden mb-3 p-3 rounded-xl text-xs font-extrabold"></div>
-
-            <!-- STEP 1: Enter Mobile Number & Send OTP -->
-            <div id="otpStepPhoneBox" class="space-y-3.5">
-                <div>
-                    <label class="text-xs font-extrabold text-slate-700">Registered Mobile Number</label>
-                    <div class="flex items-center mt-1 bg-slate-50 border-2 border-sky-200 rounded-xl overflow-hidden focus-within:border-blue-600">
-                        <span class="px-3 py-3 bg-sky-100/70 text-slate-700 font-extrabold text-xs border-r border-sky-200">+91</span>
-                        <input id="loginPhoneInput" type="tel" maxlength="10" inputmode="numeric" placeholder="Enter 10-digit mobile number" onkeydown="if(event.key==='Enter') sendLoginOtp()" class="w-full bg-transparent p-3 text-sm text-slate-900 font-bold outline-none">
-                    </div>
-                </div>
-                <p class="text-[11px] text-slate-500 font-semibold">Aapke RWA registered mobile number par 1-time OTP bheja jayega.</p>
-                <button id="btnSendOtp" onclick="sendLoginOtp()" class="w-full btn-watch py-3 text-sm shadow-lg">📲 Send OTP ➔</button>
-            </div>
-
-            <!-- STEP 2: Enter Received OTP & Verify Login -->
-            <div id="otpStepVerifyBox" class="space-y-3.5 hidden">
-                <div class="bg-indigo-50/80 border border-indigo-200 rounded-xl p-2.5 flex items-center justify-between gap-2">
-                    <div class="text-xs font-bold text-slate-700 truncate">
-                        OTP sent to: <span id="otpSentPhoneDisplay" class="font-black text-indigo-900">+91 --------</span>
-                    </div>
-                    <button type="button" onclick="resetOtpModalToPhoneStep()" class="px-2.5 py-1 rounded-lg bg-white text-indigo-700 border border-indigo-200 font-extrabold text-[11px] cursor-pointer shrink-0">✏️ Change</button>
-                </div>
-
-                <div>
-                    <label class="text-xs font-extrabold text-slate-700">Enter OTP</label>
-                    <input id="loginOtpInput" type="text" maxlength="6" inputmode="numeric" placeholder="• • • • • •" onkeydown="if(event.key==='Enter') verifyLoginOtp()" class="w-full bg-slate-50 border-2 border-sky-200 rounded-xl p-3 text-center text-lg tracking-[0.35em] text-slate-900 font-black mt-1 outline-none focus:border-blue-600">
-                </div>
-
-                <button id="btnVerifyOtp" onclick="verifyLoginOtp()" class="w-full btn-watch py-3 text-sm shadow-lg">✅ Verify OTP & Unlock Tests ➔</button>
-
-                <div class="flex items-center justify-between pt-1 text-xs font-bold text-slate-500">
-                    <span id="otpTimerText">OTP nahi mila?</span>
-                    <button id="btnResendOtp" type="button" onclick="sendLoginOtp(true)" class="text-blue-600 hover:text-blue-800 font-extrabold bg-transparent border-0 cursor-pointer">🔄 Resend OTP</button>
-                </div>
+            <!-- BOTTOM DECORATIVE WAVE FOOTER -->
+            <div class="w-full overflow-hidden leading-none">
+                <svg viewBox="0 0 500 45" preserveAspectRatio="none" class="w-full h-5">
+                    <path d="M0,15 C160,45 340,-5 500,20 L500,45 L0,45 Z" fill="#a855f7" opacity="0.35"></path>
+                    <path d="M0,28 C200,5 350,45 500,15 L500,45 L0,45 Z" fill="#7e22ce" opacity="0.5"></path>
+                </svg>
             </div>
         </div>
     </div>
@@ -811,7 +978,7 @@
                     <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-lg">👤</div>
                     <div>
                         <h3 class="font-black text-base sm:text-lg text-slate-900 leading-none">Student Account Hub</h3>
-                        <p class="text-[11px] font-bold text-slate-500 mt-0.5">Profile & OTP Login Settings</p>
+                        <p class="text-[11px] font-bold text-slate-500 mt-0.5">Profile & Official Login Settings</p>
                     </div>
                 </div>
                 <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-700 font-black text-lg cursor-pointer bg-transparent border-0">✕</button>
