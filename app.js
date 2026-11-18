@@ -1100,7 +1100,7 @@ window.sendLoginOtp = async function(isResend = false) {
     const cleanPhone = String(rawPhone).replace(/\D/g, "").slice(-10);
 
     if (!cleanPhone || cleanPhone.length !== 10) {
-        showLoginStatus("⚠️ कृपया अपना 10 अंकों का RWA रजिस्टर्ड मोबाइल नंबर दर्ज करें।", "error");
+        showLoginStatus("⚠️ कृपया अपना 10 अंकों का मोबाइल नंबर दर्ज करें।", "error");
         return;
     }
 
