@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="hi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>RWA Paid Test Series - Pro Coaching App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+    <!-- MathJax Engine for TCS CBT Math Equations -->
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] },
+        startup: {
+          pageReady: () => MathJax.startup.defaultPageReady()
+        }
+      };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+    <style>
+        @font-face {
+            font-family: 'KOKILA';
+            src: url('https://appxcontent.kaxa.in/fonts/kokila.ttf') format('truetype'),
+                 url('https://static-appxdb-v2.akamai.net.in/fonts/kokila.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* STYLE #5: UNIFIED LIVE BAR (PULSING LIVE + DATE + TICKING TIME) */
+        .rwa-unified-live-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2.5px 9px 2.5px 7px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 55%, #e0f2fe 100%);
+            border: 1px solid #a7f3d0;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1.25;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            margin-top: 2px;
+        }
+        .rwa-live-dot-pulse {
+            width: 6.5px;
+            height: 6.5px;
+            border-radius: 999px;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.65);
+            animation: rwaPulseRing 1.6s infinite;
+            flex-shrink: 0;
+        }
+        @keyframes rwaPulseRing {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.65); }
+            70% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .rwa-ulb-live { color: #047857; font-weight: 900; }
+        .rwa-ulb-sep { color: #94a3b8; font-weight: 900; }
+        .rwa-ulb-date { color: #1e40af; font-weight: 800; }
+        .rwa-ulb-time { color: #0f172a; font-weight: 900; }
+
+        body.dark-mode .rwa-unified-live-bar {
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.55) 0%, rgba(15, 23, 42, 0.92) 60%, rgba(30, 58, 138, 0.55) 100%);
+            border-color: rgba(52, 211, 153, 0.35);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+        body.dark-mode .rwa-ulb-live { color: #34d399; }
+        body.dark-mode .rwa-ulb-date { color: #7dd3fc; }
+        body.dark-mode .rwa-ulb-time { color: #f8fafc; }
+
+        /* 4-COLOUR QUESTION TIME-HEATMAP CELLS */
+        .hm-cell {
+            height: 34px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.14s ease;
+        }
+        .hm-cell:active { transform: scale(0.94); }
+        .hm-fc { background: #dcfce7; color: #15803d; border: 1.5px solid #86efac; }
+        .hm-sc { background: #dbeafe; color: #1d4ed8; border: 1.5px solid #93c5fd; }
+        .hm-fw { background: #fef3c7; color: #b45309; border: 1.5px solid #fcd34d; }
+        .hm-sw { background: #fee2e2; color: #be123c; border: 1.5px solid #fca5a5; }
+        .hm-un { background: #f1f5f9; color: #64748b; border: 1.5px solid #cbd5e1; }
+    </style>
+
+    <!-- GLOBAL WEBVIEW NATIVE DIALOG BLOCKER (101% NO URL IN WEBVIEW) -->
+    <script>
+        window.closeRwaPopup = function() {
+            const overlay = document.getElementById("rwaCustomModalOverlay");
+            if (overlay) overlay.classList.remove("active");
+        };
+
+        window.showRwaPopup = function({ title = "RWA Notification", message = "", type = "info", icon = "", btnText = "OK", showSpinner = false } = {}) {
+            const overlay = document.getElementById("rwaCustomModalOverlay");
+            const card = document.getElementById("rwaCustomModalCard");
+            if (!overlay || !card) return;
+
+            let iconClass = "rwa-icon-info", defaultIcon = "🔔", btnClass = "rwa-btn-primary";
+            if (type === "success") { iconClass = "rwa-icon-success"; defaultIcon = "✅"; btnClass = "rwa-btn-success"; }
+            else if (type === "warn") { iconClass = "rwa-icon-warn"; defaultIcon = "⚠️"; btnClass = "rwa-btn-primary"; }
+            else if (type === "error") { iconClass = "rwa-icon-error"; defaultIcon = "❌"; btnClass = "rwa-btn-danger"; }
+
+            const iconContent = showSpinner ? `<div class="rwa-pop-spinner"></div>` : (icon || defaultIcon);
+            card.innerHTML = `
+                <div class="rwa-modal-icon ${iconClass}">${iconContent}</div>
+                <div class="rwa-modal-badge">RWA TEST SERIES</div>
+                <h4 class="rwa-modal-title">${title}</h4>
+                <p class="rwa-modal-msg">${message}</p>
+                ${showSpinner ? "" : `<div class="rwa-modal-actions"><button onclick="closeRwaPopup()" class="rwa-modal-btn ${btnClass}">${btnText}</button></div>`}
+            `;
+            overlay.classList.add("active");
+        };
+
+        window.showRwaConfirm = function({
+            title = "Confirm Action", message = "Kya aap aage badhna chahte hain?",
+            icon = "⚠️", type = "danger", confirmText = "Yes, Confirm", cancelText = "Cancel", onConfirm = null
+        } = {}) {
+            const overlay = document.getElementById("rwaCustomModalOverlay");
+            const card = document.getElementById("rwaCustomModalCard");
+            if (!overlay || !card) return;
+
+            const iconClass = type === "danger" ? "rwa-icon-error" : "rwa-icon-warn";
+            const confirmBtnClass = type === "danger" ? "rwa-btn-danger" : "rwa-btn-primary";
+
+            card.innerHTML = `
+                <div class="rwa-modal-icon ${iconClass}">${icon}</div>
+                <div class="rwa-modal-badge">RWA TEST SERIES</div>
+                <h4 class="rwa-modal-title">${title}</h4>
+                <p class="rwa-modal-msg">${message}</p>
+                <div class="rwa-modal-actions">
+                    <button id="rwaConfirmCancelBtn" class="rwa-modal-btn rwa-btn-cancel">${cancelText}</button>
+                    <button id="rwaConfirmOkBtn" class="rwa-modal-btn ${confirmBtnClass}">${confirmText}</button>
+                </div>
+            `;
+            overlay.classList.add("active");
+            document.getElementById("rwaConfirmCancelBtn").onclick = () => window.closeRwaPopup();
+            document.getElementById("rwaConfirmOkBtn").onclick = () => {
+                window.closeRwaPopup();
+                if (typeof onConfirm === "function") onConfirm();
+            };
+        };
+
+        window.alert = function(msg) {
+            const str = String(msg || "");
+            const isSuccess = str.includes("✅") || /success|copied|uploaded|verified/i.test(str);
+            const isError = str.includes("❌") || /error|failed|invalid|expired/i.test(str);
+            window.showRwaPopup({
+                title: isSuccess ? "Success" : (isError ? "Alert" : "Notice"),
+                message: str.replace(/^[✅❌⚠️🔄]+\s*/, ""),
+                type: isSuccess ? "success" : (isError ? "error" : "info")
+            });
+        };
+        window.confirm = function(msg) {
+            window.showRwaPopup({ title: "Notice", message: String(msg || ""), type: "warn" });
+            return true;
+        };
+        window.prompt = function() { return ""; };
+    </script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- FLOATING TOAST STACK -->
+    <div id="proToastStack" class="fixed top-4 right-4 z-[999999] flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
+
+    <!-- MAINTENANCE / BLOCKED / IP BAN LOCK OVERLAY -->
+    <div id="portalLockOverlay" class="fixed inset-0 bg-slate-950/92 backdrop-blur-lg z-[999998] hidden flex items-center justify-center p-5">
+        <div class="bg-white rounded-3xl max-w-md w-full p-7 text-center shadow-2xl border-2 border-rose-400 text-slate-900">
+            <div id="portalLockIcon" class="text-5xl mb-3">🚧</div>
+            <h2 id="portalLockTitle" class="text-2xl font-black">Portal Under Maintenance</h2>
+            <p id="portalLockMsg" class="text-sm font-semibold text-slate-600 mt-2 leading-relaxed">
+                Portal abhi update par hai. Kripya thodi der baad try karein.
+            </p>
+            <div class="mt-5 flex justify-center gap-3">
+                <button onclick="location.reload()" class="btn-watch text-xs px-5 py-2.5">🔄 Check Again</button>
+                <button id="portalLockLogoutBtn" onclick="forceSwitchBlockedAccount()" class="hidden btn-nav bg-rose-600 text-white border-0 text-xs">🚪 Switch Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROMO POPUP BANNER MODAL (ADMIN CONTROLLED) -->
+    <div id="promoPopupModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[999990] hidden flex items-center justify-center p-4">
+        <div id="promoPopupContent" class="app-card max-w-sm w-full p-5 rounded-3xl shadow-2xl text-center space-y-3 relative"></div>
+    </div>
+
+    <!-- STUDENT NOTIFICATION BELL INBOX MODAL -->
+    <div id="studentInboxModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="app-card w-full max-w-md max-h-[82vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-sky-200/60 flex items-center justify-between">
+                <h3 class="font-black text-base">🔔 Notifications & Admin Replies</h3>
+                <button onclick="closeStudentInboxModal()" class="text-rose-600 font-black text-lg bg-transparent border-0 cursor-pointer">✕</button>
+            </div>
+            <div id="studentInboxBody" class="p-4 overflow-y-auto space-y-2.5 text-xs">Loading inbox...</div>
+        </div>
+    </div>
+
+    <!-- GLOBAL CUSTOM POPUP MODAL CONTAINER -->
+    <div id="rwaCustomModalOverlay" class="rwa-modal-overlay">
+        <div id="rwaCustomModalCard" class="rwa-modal-card"></div>
+    </div>
+
+    <!-- =========================================================
+         MINIMALIST COACHING APP TOP BAR + STYLE #5 UNIFIED LIVE BAR
+         ========================================================= -->
+    <nav id="topHeaderNav" class="app-top-bar sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-5xl mx-auto flex items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5 cursor-pointer min-w-0" onclick="goHomeHub()">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">R</div>
+                <div class="min-w-0">
+                    <div id="headerMainTitle" class="font-black text-base sm:text-lg leading-tight tracking-tight truncate">RWA TEST SERIES</div>
+                    <div class="rwa-unified-live-bar">
+                        <span class="rwa-live-dot-pulse"></span>
+                        <span id="apiStatus" class="rwa-ulb-live">Live</span>
+                        <span class="rwa-ulb-sep">•</span>
+                        <span id="hdrClockDate" class="rwa-ulb-date">--</span>
+                        <span class="rwa-ulb-sep">•</span>
+                        <span id="hdrClockTime" class="rwa-ulb-time">--:--:--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button id="inboxBellBtn" onclick="openStudentInboxModal()" class="app-hdr-icon relative" title="Notifications & Replies">
+                    <span>🔔</span>
+                    <span id="inboxUnreadDot" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center">0</span>
+                </button>
+                <button onclick="openGlobalSearchModal()" class="app-hdr-icon" title="Search & Quick Feedback">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
+                </button>
+                <button id="themeSwitchBtn" onclick="toggleTsPortalTheme()" class="app-hdr-icon" title="Toggle Dark Mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT SHELL -->
+    <main class="max-w-5xl w-full mx-auto px-3.5 sm:px-6 pt-3 pb-24 flex-1 relative overflow-x-hidden">
+
+        <!-- =========================================================
+             SLIDE 1: MAIN COACHING APP SHELL (5 BOTTOM-NAV SCREENS)
+             ========================================================= -->
+        <section id="slideExplorer" class="slide-page active-slide">
+
+            <!-- LIVE ADMIN NOTICE BANNER -->
+            <div id="liveNoticeBanner" class="hidden mb-3.5"></div>
+
+            <!-- INCOMING 1-V-1 FRIEND CHALLENGE BANNER -->
+            <div id="incomingChallengeBanner" class="hidden mb-3.5"></div>
+
+            <!-- SCHEDULED WEEKLY LIVE MOCK BANNER (SUNDAY SPECIAL) -->
+            <div id="scheduledMocksBanner" class="hidden mb-3.5"></div>
+
+            <!-- ─────────────────────────────────────────────────────
+                 TAB 1: TESTS EXPLORER (ORIGINAL LAYOUT 100% UNCHANGED)
+                 ───────────────────────────────────────────────────── -->
+            <div id="appViewTests" class="space-y-4">
+
+                <div id="homeSeriesTopBlock" class="space-y-3.5">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div class="home-pill-stat">
+                            <span class="home-pill-ico">🏆</span>
+                            <span class="home-pill-val"><span id="dashTotalSeries">0</span> Series</span>
+                        </div>
+                        <div class="home-pill-stat">
+                            <span class="home-pill-ico">📝</span>
+                            <span class="home-pill-val"><span id="dashTotalTests">0</span> Tests</span>
+                        </div>
+                        <div onclick="switchAppTab('progress')" class="home-pill-stat cursor-pointer">
+                            <span class="home-pill-ico">🔥</span>
+                            <span id="dashStreakPill" class="home-pill-val">1d Streak</span>
+                        </div>
+                        <div onclick="openCountdownModal()" class="home-pill-stat cursor-pointer">
+                            <span class="home-pill-ico">🎯</span>
+                            <span id="dashCountdownLabel" class="home-pill-val truncate">SSC GD 2027</span>
+                        </div>
+                    </div>
+
+                    <div class="home-search-wrap">
+                        <svg class="w-4 h-4 opacity-55 shrink-0" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
+                        <input type="text" id="searchBox" oninput="filterGrid()" placeholder="Search test series or exam..." class="home-search-input">
+                    </div>
+
+                    <div id="seriesCategoryBar" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        <button onclick="applySeriesCategory('all', this)" class="cat-pill active">All</button>
+                        <button onclick="applySeriesCategory('ssc', this)" class="cat-pill">SSC</button>
+                        <button onclick="applySeriesCategory('police', this)" class="cat-pill">Police</button>
+                        <button onclick="applySeriesCategory('railway', this)" class="cat-pill">Railway</button>
+                        <button onclick="applySeriesCategory('defense', this)" class="cat-pill">Defense</button>
+                        <button onclick="applySeriesCategory('up', this)" class="cat-pill">UP / State</button>
+                        <button onclick="applySeriesCategory('bank', this)" class="cat-pill">Banking</button>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 pt-0.5 px-0.5">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <h2 class="text-lg sm:text-xl font-black tracking-tight truncate">All Paid Test Series</h2>
+                            <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black shrink-0">Official</span>
+                        </div>
+                        <button onclick="forceSyncCurrentExplorer()" class="sync-pill-btn">🔄 Sync</button>
+                    </div>
+                </div>
+
+                <!-- SLIDE 2 INNER HEADER -->
+                <div id="innerExplorerHeader" class="hidden space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <button id="backNavBtn" onclick="handleGlobalBack()" class="inner-back-btn" title="Back">❮</button>
+                            <div class="min-w-0">
+                                <span id="crumbText" class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-sky-400 block truncate">Official Exam Series</span>
+                                <h2 id="headingText" class="text-lg sm:text-xl font-black leading-tight truncate">Test Series</h2>
+                            </div>
+                        </div>
+                        <button onclick="forceSyncCurrentExplorer()" class="sync-pill-btn shrink-0">🔄 Sync</button>
+                    </div>
+
+                    <div class="home-search-wrap">
+                        <svg class="w-4 h-4 opacity-55 shrink-0" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
+                        <input type="text" id="innerSearchBox" oninput="filterGrid(this.value)" placeholder="Search mock test or folder..." class="home-search-input">
+                    </div>
+
+                    <div id="testFilterChipsBar" class="hidden flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        <button onclick="applyTestListFilter('all', this)" class="cat-pill active">All Tests</button>
+                        <button onclick="applyTestListFilter('unattempted', this)" class="cat-pill">Unattempted</button>
+                        <button onclick="applyTestListFilter('attempted', this)" class="cat-pill">Attempted</button>
+                        <button onclick="applyTestListFilter('paused', this)" class="cat-pill">Paused</button>
+                        <button onclick="applyTestListFilter('haspdf', this)" class="cat-pill">Has PDF</button>
+                    </div>
+                </div>
+
+                <div id="mainGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- ─────────────────────────────────────────────────────
+                 TAB 2: MY PROGRESS, SPLINE WAVEFORM, BOOSTER & WEEKLY XP LEAGUE
+                 ───────────────────────────────────────────────────── -->
+            <div id="appViewDashboard" class="hidden space-y-4">
+                <div class="app-card p-5">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="progress-ring-shell" id="dashProgressRing">
+                            <div class="progress-ring-inner">
+                                <div id="dashProgressPercent" class="text-xl font-black leading-none">0%</div>
+                                <div class="text-[11px] font-bold opacity-65 mt-0.5">Done</div>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-2 min-w-0">
+                            <div class="prog-stat-pill"><span>📝</span><span><strong id="dashAttemptedTests">0</strong> Attempted</span></div>
+                            <div class="prog-stat-pill"><span>🎯</span><span><strong id="dashAvgAccuracy">0%</strong> Avg Accuracy</span></div>
+                            <div class="prog-stat-pill"><span>🔥</span><span><strong id="dashProgressStreak">1 Day</strong> Streak</span></div>
+                        </div>
+                    </div>
+                    <p id="dashProgressSubtext" class="text-xs font-bold opacity-70 mt-3.5 text-center">Abhi tak aapne 0 tests attempt kiye hain.</p>
+                </div>
+
+                <!-- INTERACTIVE SPLINE WAVEFORM PERFORMANCE GRAPH -->
+                <div id="progressWaveCard" class="app-card p-5 space-y-3">
+                    <div class="flex justify-between items-center gap-2 flex-wrap">
+                        <div>
+                            <h3 class="text-base font-black">〰️ Performance Spline Waveform</h3>
+                            <p class="text-[11px] font-bold opacity-65">Tap any node to inspect Score % & Accuracy %</p>
+                        </div>
+                        <span id="waveTrendDeltaBadge" class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">Live Trend</span>
+                    </div>
+                    <div id="progressWaveContainer" class="w-full overflow-x-auto no-scrollbar"></div>
+                    <div id="progressWaveReadout" class="p-2.5 rounded-xl bg-sky-50 dark:bg-slate-800 border border-sky-200/70 dark:border-slate-700 text-xs font-extrabold text-center text-blue-800 dark:text-sky-300">
+                        Mock tests attempt karte hi aapka smooth Spline Waveform graph yahan dikhega.
+                    </div>
+                </div>
+
+                <!-- SUBJECT-WISE STRENGTH METER + 1-CLICK WEAKEST BOOSTER -->
+                <div id="subjectStrengthCard" class="app-card p-5 hidden">
+                    <div class="flex justify-between items-center gap-2 mb-3">
+                        <h3 class="text-base font-black">💪 Subject Strength & Booster</h3>
+                        <span class="text-[10px] font-black uppercase text-rose-600">1-Click Fix</span>
+                    </div>
+                    <div id="subjectStrengthBars" class="space-y-3 text-xs"></div>
+                </div>
+
+                <!-- WEEKLY XP & STUDY LEAGUE -->
+                <div id="weeklyXpLeagueCard" class="app-card p-5 space-y-3">
+                    <div class="flex justify-between items-center gap-2 flex-wrap">
+                        <div>
+                            <h3 class="text-base font-black">⚡ Weekly XP & Study League</h3>
+                            <p id="xpLeagueMySummary" class="text-[11px] font-bold opacity-70">Earn XP via Mock Tests, Rapid Quiz & Pomodoro</p>
+                        </div>
+                        <span id="xpMyTierBadge" class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black">🥉 Bronze</span>
+                    </div>
+                    <div id="weeklyXpLeagueList" class="space-y-2 text-xs">Loading Weekly League...</div>
+                </div>
+
+                <!-- RECENTLY ATTEMPTED TESTS -->
+                <div class="app-card p-5">
+                    <div class="flex justify-between items-center mb-3.5">
+                        <h3 class="text-base font-black">Recently Attempted Tests</h3>
+                        <button onclick="clearAttemptHistory()" class="text-[11px] font-extrabold text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-full border-0 cursor-pointer">🗑 Reset</button>
+                    </div>
+                    <div id="recentAttemptsList" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- ─────────────────────────────────────────────────────
+                 TAB 3: SAVED BOOKMARKS VAULT (WITH PERSONAL NOTES)
+                 ───────────────────────────────────────────────────── -->
+            <div id="appViewBookmarks" class="hidden space-y-4">
+                <div id="bookmarksListSubView" class="space-y-3.5">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <h2 class="text-xl font-black">Saved Bookmarks (<span id="bookmarkCountBadge">0</span>)</h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="launchBookmarksPracticeTest()" class="px-3.5 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-extrabold text-xs border-0 shadow cursor-pointer">Practice All ▶</button>
+                            <button onclick="clearAllBookmarks()" class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 font-black text-xs border-0 cursor-pointer" title="Clear All Bookmarks">🗑</button>
+                        </div>
+                    </div>
+                    <div id="bookmarkSubjectFilterBar" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        <button onclick="filterBookmarksBySubject('all', this)" class="cat-pill active">All</button>
+                    </div>
+                    <div id="bookmarksListContainer" class="space-y-3.5"></div>
+                </div>
+
+                <div id="bookmarkDetailSubView" class="hidden">
+                    <div class="app-card p-5 space-y-4">
+                        <div class="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-sky-200/60">
+                            <button onclick="closeBookmarkDetailView()" class="btn-nav bg-slate-900 text-white border-0 text-xs">⬅ Back</button>
+                            <div class="flex items-center gap-2">
+                                <span id="bmDetailCounter" class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-900 font-black text-xs">1 / 1</span>
+                                <button id="bmDetailDeleteBtn" class="btn-nav bg-rose-600 text-white border-0 text-xs">🗑 Remove</button>
+                            </div>
+                        </div>
+                        <div id="bmDetailMeta" class="flex items-center gap-2 flex-wrap"></div>
+                        <div id="bmDetailQuestion" class="text-base font-bold leading-relaxed bg-sky-50/70 dark:bg-slate-800 p-4 rounded-2xl border border-sky-200/60 dark:border-slate-700"></div>
+                        <div id="bmDetailOptions" class="space-y-2.5"></div>
+
+                        <!-- PERSONAL REVISION NOTE / TRICK BOX -->
+                        <div class="bg-amber-50/80 dark:bg-slate-800/90 border-2 border-amber-200 dark:border-amber-700/60 rounded-2xl p-3.5 space-y-2">
+                            <div class="font-black text-xs text-amber-900 dark:text-amber-300">📝 Personal Short Trick / Revision Note</div>
+                            <textarea id="bmDetailNoteInput" rows="2" placeholder="Apni short trick ya formula yahan likhein (e.g. Ratio = (S+D):(S-D))..." class="app-form-input text-xs"></textarea>
+                            <button onclick="saveActiveBookmarkNote()" class="px-4 py-1.5 rounded-xl bg-amber-500 text-white font-black text-xs border-0 cursor-pointer">💾 Save Note to Cloud</button>
+                        </div>
+
+                        <div class="bg-sky-50 dark:bg-slate-800/90 border-2 border-sky-200 dark:border-slate-700 rounded-2xl p-4">
+                            <div class="font-black text-sm text-indigo-900 dark:text-sky-300 mb-1.5">💡 Official Full Explanation</div>
+                            <div id="bmDetailSolution" class="text-sm leading-relaxed"></div>
+                        </div>
+                        <div class="flex justify-between items-center pt-3 border-t border-sky-200/60 gap-3">
+                            <button id="bmPrevBtn" onclick="prevBookmarkDetail()" class="btn-nav bg-slate-800 text-white border-0 text-xs px-5 py-2.5">⬅ Prev</button>
+                            <button id="bmNextBtn" onclick="nextBookmarkDetail()" class="btn-watch text-xs px-6 py-2.5">Next ➔</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─────────────────────────────────────────────────────
+                 TAB 4: PRO STUDY VAULT HUB
+                 ───────────────────────────────────────────────────── -->
+            <div id="appViewProTools" class="hidden space-y-4">
+                <div id="vaultHubSubView" class="space-y-4">
+                    <div class="rapid-quiz-banner p-5 rounded-3xl text-center text-white shadow-lg">
+                        <div class="text-xl sm:text-2xl font-black tracking-tight">Daily 5-Min Rapid Quiz ⚡</div>
+                        <p class="text-xs font-bold opacity-90 mt-1">Rozana 5 sawal solve karein (+30 XP & Streak active rakhein)</p>
+                        <button onclick="openVaultToolDetail('rapid_quiz')" class="mt-3.5 px-7 py-2.5 rounded-full bg-white text-orange-600 font-black text-sm border-0 shadow-md cursor-pointer active:scale-95 transition">Start Quiz ⚡</button>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                        <div onclick="openVaultToolDetail('mistakes')" class="vault-tool-card">
+                            <div class="vault-tool-ico bg-rose-100 text-rose-600">📕</div>
+                            <div class="font-black text-sm mt-2.5">Mistake Bank</div>
+                            <span id="vaultMistakeBadge" class="mt-1.5 px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black">0 Qs</span>
+                        </div>
+
+                        <div onclick="openVaultToolDetail('custom_mock')" class="vault-tool-card">
+                            <div class="vault-tool-ico bg-indigo-100 text-indigo-600">🛠️</div>
+                            <div class="font-black text-sm mt-2.5">Custom Mock Builder</div>
+                            <span class="mt-1.5 text-[11px] font-bold opacity-65">Mix Qs & Timer</span>
+                        </div>
+
+                        <div onclick="openVaultToolDetail('ca_capsules')" class="vault-tool-card">
+                            <div class="vault-tool-ico bg-blue-100 text-blue-600">📰</div>
+                            <div class="font-black text-sm mt-2.5">Current Affairs & GK</div>
+                            <span class="mt-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black">Daily Capsules</span>
+                        </div>
+
+                        <div onclick="openVaultToolDetail('flashcards')" class="vault-tool-card">
+                            <div class="vault-tool-ico bg-teal-100 text-teal-600">🃏</div>
+                            <div class="font-black text-sm mt-2.5">3D Flashcards</div>
+                            <span id="vaultFlashcardBadge" class="mt-1.5 px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-black">2 Cards</span>
+                        </div>
+
+                        <div onclick="openVaultToolDetail('pomodoro')" class="vault-tool-card">
+                            <div class="vault-tool-ico bg-amber-100 text-amber-600">🍅</div>
+                            <div class="font-black text-sm mt-2.5">Pomodoro Focus Timer</div>
+                            <span class="mt-1.5 text-[11px] font-bold opacity-65">+25 XP / Session</span>
+                        </div>
+
+                        <div onclick="openVaultToolDetail('planner')" class="vault-tool-card">
+                            <div class="vault-tool-ico bg-sky-100 text-sky-600">📅</div>
+                            <div class="font-black text-sm mt-2.5">Daily Study Planner</div>
+                            <span id="vaultPlannerBadge" class="mt-1.5 text-[11px] font-bold opacity-65">0 Tasks</span>
+                        </div>
+
+                        <div onclick="openCountdownModal()" class="vault-tool-card col-span-2 sm:col-span-3">
+                            <div class="flex items-center gap-3">
+                                <div class="vault-tool-ico bg-orange-100 text-orange-600">🎯</div>
+                                <div class="text-left">
+                                    <div class="font-black text-sm">Target Exam Countdown</div>
+                                    <div id="vaultCountdownSub" class="text-xs font-bold text-indigo-600 dark:text-sky-400">SSC GD 2027</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vaultToolDetailSubView" class="hidden space-y-3.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <button onclick="closeVaultToolDetail()" class="inner-back-btn">❮</button>
+                            <h3 id="vaultDetailTitle" class="text-lg font-black truncate">Pro Tool</h3>
+                        </div>
+                        <div id="vaultDetailRightAction"></div>
+                    </div>
+                    <div id="proToolsBody" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- ─────────────────────────────────────────────────────
+                 TAB 5: FULL-SCREEN STUDENT PROFILE
+                 ───────────────────────────────────────────────────── -->
+            <div id="appViewProfile" class="hidden space-y-4">
+                <div id="profileTabContent" class="space-y-4"></div>
+            </div>
+
+        </section>
+
+        <!-- =========================================================
+             SLIDE 2: FULL-SCREEN TCS CBT MOCK TEST ENGINE
+             ========================================================= -->
+        <section id="slideTestAttempt" class="slide-page hidden-slide">
+            <div id="tcs-app-wrapper" class="tcs-fullscreen-shell">
+
+                <!-- STEP 1: START & SUBJECT SELECTION + STRICT REAL-EXAM MODE -->
+                <div id="start-screen" class="tcs-step-page">
+                    <div class="start-card">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-3.5">
+                            <button onclick="exitCbtTest()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border-0 cursor-pointer">← Back</button>
+                            <span id="tcs-series-tag" class="px-3 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wide">TCS CBT PATTERN</span>
+                        </div>
+                        <h2 id="tcs-start-title" style="color: #0f172a; margin-bottom: 14px;">(TCS Pattern) Mock Test</h2>
+                        <div id="subjects-selection-container"></div>
+                        <div class="stats-box">
+                            <div class="start-info"><span>Total Questions:</span> <span id="stat-qs">--</span></div>
+                            <div class="start-info"><span>Total Time:</span> <span id="stat-time">--</span></div>
+                            <div class="start-info"><span>Timing Mode:</span> <span id="stat-mode">Overall Timing</span></div>
+                            <div class="start-info"><span>Maximum Marks:</span> <span id="stat-marks">--</span></div>
+                            <div class="start-info"><span>Marking Scheme:</span> <span id="stat-marking">+2 / -0.5</span></div>
+                        </div>
+
+                        <!-- OPTIONAL STRICT REAL-EXAM MODE SWITCH -->
+                        <label class="flex items-center justify-between gap-3 p-3 my-3 rounded-xl bg-rose-50 border border-rose-200 cursor-pointer text-left">
+                            <div>
+                                <div class="text-xs font-black text-rose-900">🛡️ Strict Real-Exam Mode (Optional)</div>
+                                <div class="text-[11px] font-bold text-rose-700/80">Fullscreen lock • Last 5-min beep • 3 tab switch par auto-submit</div>
+                            </div>
+                            <input id="strictExamToggle" type="checkbox" class="w-5 h-5 accent-rose-600 shrink-0">
+                        </label>
+
+                        <button id="tcs-start-btn" class="start-btn" onclick="startTest()">Start Test ➔</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: LIVE CBT TEST SCREEN -->
+                <div id="live-test-screen" class="tcs-step-page tcs-hidden">
+                    <div class="tcs-header">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="tcs-timer">
+                                <span id="tcs-timer-display" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs sm:text-sm font-black tracking-wide">00:60:00</span>
+                            </div>
+                            <span id="tcsTabSwitchBadge" class="hidden px-2 py-0.5 rounded bg-amber-500 text-white text-[10px] font-black">⚠️ 0</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <button onclick="adjustTcsFont(-1)" class="tcs-hdr-mini">A-</button>
+                            <button onclick="adjustTcsFont(1)" class="tcs-hdr-mini">A+</button>
+                            <button id="tcsNightBtn" onclick="toggleTcsNightMode()" class="tcs-hdr-mini" title="Night Exam">🌙</button>
+                            <button onclick="toggleTcsLangMode()" id="tcs-lang-btn" class="tcs-hdr-mini">A/अ</button>
+                            <button onclick="toggleTcsFullScreen()" class="tcs-hdr-mini hidden sm:inline-block" title="Fullscreen">⛶</button>
+                            <div class="tcs-hamburger" onclick="toggleTcsPalette()" title="Question Palette">≡</div>
+                        </div>
+                    </div>
+
+                    <div class="tcs-tabs-wrapper" id="tcs-tabs-container"></div>
+
+                    <div class="tcs-q-info-bar">
+                        <div class="flex items-center gap-2">
+                            <span class="tcs-q-pill-num">Q.<span id="tcs-q-num">1</span></span>
+                            <span class="tcs-q-pill-time">⏱ <span id="tcs-q-time">00:00</span></span>
+                            <span class="tcs-m-pos" id="tcs-live-pos">+2</span>
+                            <span class="tcs-m-neg" id="tcs-live-neg">-0.5</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="flagCurrentLiveQuestion()" class="px-2 py-1 rounded-lg bg-rose-100 text-rose-700 border border-rose-300 font-extrabold text-xs cursor-pointer" title="Report Question Error">🚩</button>
+                            <button id="tcs-bookmark-btn" onclick="toggleCurrentQuestionBookmark()" class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs cursor-pointer">☆ Save</button>
+                        </div>
+                    </div>
+
+                    <div class="tcs-question-area" id="tcs-question-scroll-box">
+                        <div class="tcs-q-card-inner">
+                            <div class="tcs-q-text" id="tcs-q-text">Loading...</div>
+                            <div id="tcs-options-container"></div>
+                        </div>
+                    </div>
+
+                    <div class="tcs-footer">
+                        <div class="tcs-arrows">
+                            <button class="tcs-arrow-btn" onclick="prevQuestion()">❮</button>
+                            <span id="tcs-footer-sec-info" class="text-xs font-bold opacity-65 self-center truncate px-2">Section 1</span>
+                            <button class="tcs-arrow-btn" onclick="nextQuestion()">❯</button>
+                        </div>
+                        <div class="tcs-actions-row">
+                            <button class="tcs-btn tcs-btn-submit" id="btn-submit-dynamic" onclick="handleDynamicSubmit()">Submit</button>
+                            <button class="tcs-btn" onclick="markForReview()">Mark</button>
+                            <button class="tcs-btn" onclick="clearResponse()">Clear</button>
+                            <button class="tcs-btn tcs-btn-save" onclick="saveAndNext()">Save & Next</button>
+                        </div>
+                    </div>
+
+                    <!-- Slide-Over Question Palette Drawer -->
+                    <div class="tcs-drawer-overlay" id="tcs-palette" onclick="if(event.target === this) toggleTcsPalette()">
+                        <div class="tcs-drawer">
+                            <div class="tcs-dr-header">
+                                <div class="tcs-dr-tab active">Grid View</div>
+                                <div class="tcs-dr-tab" onclick="prepareSubmit()">Summary</div>
+                                <div class="tcs-dr-close" onclick="toggleTcsPalette()">✕</div>
+                            </div>
+                            <div class="tcs-dr-content">
+                                <div class="tcs-legend">
+                                    <div class="tcs-leg-item"><div class="tcs-circ c-attempt"></div> Attempted</div>
+                                    <div class="tcs-leg-item"><div class="tcs-circ c-marked"></div> Marked For Review</div>
+                                    <div class="tcs-leg-item"><div class="tcs-circ c-unattempt"></div> Unattempted</div>
+                                </div>
+                                <div id="tcs-accordion-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: SUBMIT CONFIRMATION SUMMARY -->
+                <div id="submit-screen" class="tcs-step-page tcs-hidden">
+                    <div class="tcs-page-inner">
+                        <div class="submit-header">Submit Test Summary</div>
+                        <div id="submit-summary-container"></div>
+                        <div class="confirm-actions-card">
+                            <h3 class="text-base font-black text-slate-900 mb-3.5">Are you sure you want to submit?</h3>
+                            <div class="flex gap-3">
+                                <button class="btn-no flex-1" onclick="closeSubmit()">No, Back to Test</button>
+                                <button class="btn-yes flex-1" onclick="submitTest()">Yes, Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: DEEP ANALYSIS, SPLINE WAVEFORM, 4-COLOUR HEATMAP, CHALLENGE & LEADERBOARD -->
+                <div id="analysis-screen" class="tcs-step-page tcs-hidden">
+                    <div class="analysis-header">
+                        <button onclick="exitCbtTest()" class="px-3 py-1.5 rounded-lg bg-white/15 text-white font-bold text-xs border-0 cursor-pointer">← Exit</button>
+                        <h1 class="text-sm sm:text-base font-black m-0">Analysis & Rank</h1>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="createAndShareFriendChallenge()" class="px-2.5 py-1.5 rounded-lg bg-amber-500 text-white font-bold text-xs border-0 cursor-pointer" title="1-v-1 Challenge Friend">⚔️</button>
+                            <button onclick="shareScorecardPng()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs border-0 cursor-pointer" title="Download/Share PNG">📸</button>
+                            <button onclick="exportTestPdfSheet()" class="px-2.5 py-1.5 rounded-lg bg-white/15 text-white font-bold text-xs border border-white/25 cursor-pointer">📄</button>
+                            <button onclick="reAttemptCbtTest()" class="px-2.5 py-1.5 rounded-lg bg-blue-600 text-white font-bold text-xs border-0 cursor-pointer">🔄</button>
+                        </div>
+                    </div>
+
+                    <div class="tcs-page-inner pb-8">
+                        <div id="dynamic-remark" class="remark-banner" style="display:none;"></div>
+
+                        <!-- 1-V-1 HEAD-TO-HEAD CHALLENGE RESULT BANNER -->
+                        <div id="tcsChallengeResultBanner" class="a-card hidden" style="background:#eef2ff; border:2px solid #818cf8;"></div>
+
+                        <div class="a-card">
+                            <h2 class="text-base font-black text-slate-900 mb-3">Your Scorecard</h2>
+                            <div class="grid grid-cols-2 gap-2.5 mb-3">
+                                <div class="p-3 rounded-2xl bg-orange-100/80 flex items-center gap-2.5">
+                                    <span class="text-2xl">🏆</span>
+                                    <div><div id="res-score" class="text-base font-black text-slate-900">0/0</div><div class="text-[11px] font-bold text-slate-600">Score</div></div>
+                                </div>
+                                <div class="p-3 rounded-2xl bg-amber-100/80 flex items-center gap-2.5">
+                                    <span class="text-2xl">🥇</span>
+                                    <div><div id="res-rank" class="text-base font-black text-slate-900">--</div><div class="text-[11px] font-bold text-slate-600">All-India Rank</div></div>
+                                </div>
+                                <div class="p-3 rounded-2xl bg-emerald-100/80 flex items-center gap-2.5">
+                                    <span class="text-2xl">📈</span>
+                                    <div><div id="res-perc" class="text-base font-black text-slate-900">--</div><div class="text-[11px] font-bold text-slate-600">Percentile</div></div>
+                                </div>
+                                <div class="p-3 rounded-2xl bg-sky-100/80 flex items-center gap-2.5">
+                                    <span class="text-2xl">🎯</span>
+                                    <div><div id="res-acc" class="text-base font-black text-slate-900">0%</div><div class="text-[11px] font-bold text-slate-600">Accuracy</div></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-100">
+                                <div class="p-2 rounded-xl bg-emerald-50"><div id="res-correct" class="font-black text-emerald-700 text-base">0</div><div class="text-[10px] font-bold text-slate-500">Correct ✓</div></div>
+                                <div class="p-2 rounded-xl bg-rose-50"><div id="res-incorrect" class="font-black text-rose-700 text-base">0</div><div class="text-[10px] font-bold text-slate-500">Wrong ✕</div></div>
+                                <div class="p-2 rounded-xl bg-slate-100"><div id="res-unatt" class="font-black text-slate-700 text-base">0</div><div class="text-[10px] font-bold text-slate-500">Skipped −</div></div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION ACCURACY SPLINE WAVEFORM -->
+                        <div class="a-card" id="tcsAnalysisWaveCard">
+                            <h2 class="text-base font-black text-slate-900 mb-2">〰️ Section Accuracy Waveform</h2>
+                            <div id="tcsAnalysisWaveContainer" class="w-full overflow-x-auto"></div>
+                            <div id="tcsAnalysisWaveReadout" class="mt-2 p-2 rounded-xl bg-sky-50 text-xs font-extrabold text-center text-blue-900"></div>
+                        </div>
+
+                        <!-- 4-COLOUR QUESTION TIME-HEATMAP GRID -->
+                        <div class="a-card" id="tcsHeatmapCard">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-base font-black text-slate-900">🔥 4-Colour Question Time-Heatmap</h2>
+                                <span class="text-[10px] font-extrabold text-slate-500">Tap box → Solution</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 text-[10px] font-black mb-2.5">
+                                <span class="px-2 py-0.5 rounded hm-fc">Fast Correct</span>
+                                <span class="px-2 py-0.5 rounded hm-sc">Slow Correct</span>
+                                <span class="px-2 py-0.5 rounded hm-fw">Tukka (≤5s)</span>
+                                <span class="px-2 py-0.5 rounded hm-sw">Trap (≥60s)</span>
+                                <span class="px-2 py-0.5 rounded hm-un">Skipped</span>
+                            </div>
+                            <div id="tcsHeatmapGrid" class="grid grid-cols-8 sm:grid-cols-10 gap-1.5"></div>
+                        </div>
+
+                        <!-- CATEGORY-WISE CUT-OFF & SELECTION PREDICTOR -->
+                        <div class="a-card" id="tcsCutoffCard">
+                            <h2 class="text-base font-black text-slate-900 mb-2">🎯 Category Cut-Off & Selection Predictor</h2>
+                            <div id="tcsCutoffBody" class="text-xs space-y-2"></div>
+                        </div>
+
+                        <!-- REAL ALL-INDIA TOP-10 LEADERBOARD -->
+                        <div class="a-card" id="tcsLeaderboardCard">
+                            <div class="flex justify-between items-center mb-3">
+                                <h2 class="text-base font-black text-slate-900">All-India Top-10 Leaderboard</h2>
+                                <span id="lbParticipantsBadge" class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black">Live</span>
+                            </div>
+                            <div id="tcsLeaderboardBody" class="space-y-1.5 text-xs">Loading live ranks...</div>
+                        </div>
+
+                        <!-- TIME-TRAP & GUESSWORK DETECTOR -->
+                        <div class="a-card" id="tcsTimeTrapCard">
+                            <h2 class="text-base font-black text-slate-900 mb-2.5">Time-Trap & Guesswork Detector</h2>
+                            <div id="tcsTimeTrapList" class="space-y-2 text-xs"></div>
+                        </div>
+
+                        <div class="a-card">
+                            <h2 class="text-base font-black text-center mb-3">Comparison</h2>
+                            <table class="comp-table">
+                                <thead><tr><th style="border:none;"></th><th class="col-you">You</th><th class="col-top">Topper</th><th class="col-avg">Avg</th></tr></thead>
+                                <tbody>
+                                    <tr><td class="row-lbl">Score</td><td class="sc-you" id="cmp-score">0.0</td><td class="sc-top" id="cmp-top">--</td><td class="sc-avg" id="cmp-avg">--</td></tr>
+                                    <tr><td class="row-lbl">Accuracy</td><td class="ac-you" id="cmp-acc">0%</td><td class="ac-top" id="cmp-top-a">95%</td><td class="ac-avg" id="cmp-avg-a">55%</td></tr>
+                                    <tr><td class="row-lbl">Correct</td><td class="cr-you" id="cmp-c">0</td><td class="cr-top" id="cmp-top-c">--</td><td class="cr-avg" id="cmp-avg-c">--</td></tr>
+                                    <tr><td class="row-lbl">Wrong</td><td class="wr-you" id="cmp-w">0</td><td class="wr-top" id="cmp-top-w">--</td><td class="wr-avg" id="cmp-avg-w">--</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="a-card">
+                            <div class="donut-container"><div class="donut-chart" id="res-donut"><div class="donut-inner"></div></div></div>
+                            <div class="chart-legend">
+                                <div class="legend-item"><div class="dot bg-green"></div>Correct</div>
+                                <div class="legend-item"><div class="dot bg-red"></div>Incorrect</div>
+                                <div class="legend-item"><div class="dot bg-cyan"></div>Unattempted</div>
+                            </div>
+                            <h3 class="text-center mt-5 text-base font-black">Time Stats</h3>
+                            <div class="time-stats-box">
+                                <div class="ts-left" id="ts-box-corr">Correct</div>
+                                <div class="ts-right">
+                                    <div class="ts-rt-top" id="ts-box-una">Unattempted</div>
+                                    <div class="ts-rt-bot" id="ts-box-inc">Incorrect</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="a-card" id="weak-areas-card" style="display:none; background:#ffebee; border: 1px solid #ffcdd2;">
+                            <h3 class="text-rose-700 mb-2 text-center font-black">⚠️ Weak Subjects to Improve</h3>
+                            <ul id="weak-areas-list" class="text-rose-800 text-xs pl-5 leading-relaxed font-bold"></ul>
+                        </div>
+
+                        <div class="sec-title">Section Wise Stats</div>
+                        <div id="analysis-sections-container"></div>
+
+                        <div class="px-4 pt-2 flex flex-col gap-2.5">
+                            <button class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-black text-sm border-0 shadow-lg cursor-pointer" onclick="openSolutions()">View Solutions & Full Analysis ➔</button>
+                            <button class="w-full py-3 rounded-2xl bg-amber-500 text-white font-black text-xs border-0 shadow cursor-pointer" onclick="createAndShareFriendChallenge()">⚔️ 1-v-1 Challenge a Friend (Copy Link)</button>
+                            <button class="w-full py-3 rounded-2xl bg-rose-50 text-rose-700 border border-rose-300 font-extrabold text-xs cursor-pointer" onclick="reAttemptWrongOnlyFromCurrent()">❌ Re-Attempt Only Wrong Questions</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: SOLUTIONS LIST TIMELINE -->
+                <div id="solutions-screen" class="tcs-step-page tcs-hidden">
+                    <div class="sol-header">
+                        <span class="cursor-pointer px-2 py-1" onclick="closeSolutions()">← Back</span>
+                        <span>Solutions</span>
+                        <span class="text-base cursor-pointer px-2" onclick="toggleTcsLangMode()">A/अ</span>
+                    </div>
+                    <div class="filters" id="sol-filters-bar">
+                        <button class="flt-btn flt-active" onclick="filterSol('all', this)">All</button>
+                        <button class="flt-btn" onclick="filterSol('correct', this)">Correct</button>
+                        <button class="flt-btn" onclick="filterSol('incorrect', this)">Incorrect</button>
+                        <button class="flt-btn" onclick="filterSol('unattempted', this)">Unattempted</button>
+                    </div>
+                    <div class="tcs-page-inner"><div class="sol-container" id="sol-list-container"></div></div>
+                </div>
+
+                <!-- STEP 6: INDIVIDUAL QUESTION FULL SOLUTION -->
+                <div id="full-sol-screen" class="tcs-step-page tcs-hidden">
+                    <div class="fs-header">
+                        <span class="cursor-pointer px-2 py-1" onclick="closeFullSol()">← List</span>
+                        <span>Full Solution</span>
+                        <span class="text-base cursor-pointer px-2" onclick="toggleTcsLangMode()">A/अ</span>
+                    </div>
+                    <div class="tcs-page-inner" style="padding-bottom: 90px;">
+                        <div class="fs-q-info">
+                            <div class="fs-q-pill" id="fs-q-num">Question 1</div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <div id="fs-q-time-compare"></div>
+                                <button id="fs-bookmark-btn" onclick="toggleSolutionQuestionBookmark()" class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs cursor-pointer">☆ Save</button>
+                                <button onclick="flagFullSolQuestion()" class="px-2 py-1 rounded-lg bg-rose-100 text-rose-700 border border-rose-300 font-extrabold text-xs cursor-pointer" title="Report Question Mistake">🚩</button>
+                                <button onclick="makeFlashcardFromFullSol()" class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs cursor-pointer" title="Save as Flashcard">🃏</button>
+                                <button onclick="copyCurrentQuestionDoubt()" class="px-2 py-1 rounded-lg bg-sky-100 text-sky-900 border border-sky-300 font-extrabold text-xs cursor-pointer" title="Copy Question">📋</button>
+                            </div>
+                        </div>
+                        <div class="fs-content">
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-4">
+                                <div class="fs-q-txt" id="fs-q-txt">Q Text</div>
+                                <div id="fs-options-container"></div>
+                            </div>
+                            <div class="bg-sky-50 border border-sky-200 rounded-2xl p-4">
+                                <div class="fs-exp-title" style="margin-top:0;">💡 Official Full Solution</div>
+                                <div class="fs-exp-text" id="fs-exp-text" style="background:transparent;border:none;padding:0;">Explanation</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fs-bottom-bar">
+                        <button class="btn-prev-sol" onclick="prevFullSol()">← Prev</button>
+                        <button class="btn-next" onclick="nextFullSol()">Next →</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SLIDE 3: FULL-SCREEN BORDERLESS PDF VIEWER -->
+        <section id="slidePdf" class="slide-page hidden-slide">
+            <div class="pdf-floating-bar">
+                <button onclick="closePdfSlide()" class="pdf-floating-close-btn">✕ Close</button>
+                <button id="pdfNightReadBtn" onclick="togglePdfNightMode()" class="pdf-floating-night-btn">🌙 Night</button>
+            </div>
+            <iframe id="pdfFrame" src="" frameborder="0"></iframe>
+        </section>
+
+    </main>
+
+    <!-- NATIVE COACHING APP FIXED 5-TAB BOTTOM NAVIGATION BAR -->
+    <nav id="appBottomNav" class="app-bottom-nav">
+        <button onclick="switchAppTab('tests')" data-apptab="tests" class="bnav-item active">
+            <span class="bnav-pill-bg"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h4" stroke-linecap="round"/></svg></span>
+            <span class="bnav-label">Tests</span>
+        </button>
+        <button onclick="switchAppTab('progress')" data-apptab="progress" class="bnav-item">
+            <span class="bnav-pill-bg"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><path d="M5 20v-6M12 20V8M19 20V4" stroke-linecap="round"/></svg></span>
+            <span class="bnav-label">Progress</span>
+        </button>
+        <button onclick="switchAppTab('bookmarks')" data-apptab="bookmarks" class="bnav-item">
+            <span class="bnav-pill-bg"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><path d="M6 4h12a1 1 0 011 1v16l-7-4-7 4V5a1 1 0 011-1z" stroke-linejoin="round"/></svg></span>
+            <span class="bnav-label">Saved</span>
+        </button>
+        <button onclick="switchAppTab('protools')" data-apptab="protools" class="bnav-item">
+            <span class="bnav-pill-bg"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/><path d="M12 11v4M10 13h4" stroke-linecap="round"/></svg></span>
+            <span class="bnav-label">Vault</span>
+        </button>
+        <button onclick="switchAppTab('profile')" data-apptab="profile" class="bnav-item">
+            <span class="bnav-pill-bg"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" stroke-linecap="round"/></svg></span>
+            <span class="bnav-label">Profile</span>
+        </button>
+    </nav>
+
+    <!-- SMART GLOBAL SEARCH & QUICK REPORT SCREEN -->
+    <div id="globalSearchModal" class="fixed inset-0 z-50 hidden flex flex-col search-screen-shell">
+        <div class="p-3.5 border-b border-sky-200/60 flex items-center gap-2.5 max-w-2xl w-full mx-auto">
+            <button onclick="closeGlobalSearchModal()" class="inner-back-btn">❮</button>
+            <div class="home-search-wrap flex-1">
+                <svg class="w-4 h-4 opacity-55 shrink-0" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
+                <input id="globalSearchInput" type="text" oninput="runGlobalSearch(this.value)" placeholder="Search Series, Scorecard, Bookmarks..." class="home-search-input">
+                <button onclick="document.getElementById('globalSearchInput').value=''; runGlobalSearch('');" class="text-slate-400 font-black text-sm bg-transparent border-0 cursor-pointer">✕</button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 max-w-2xl w-full mx-auto space-y-5 pb-10">
+            <div>
+                <h3 class="font-black text-base mb-2.5">Search Results</h3>
+                <div id="globalSearchResults" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"></div>
+            </div>
+            <div id="quickFeedbackBox">
+                <h3 class="font-black text-base mb-2.5">Quick Feedback</h3>
+                <div class="app-card p-4 space-y-3">
+                    <div class="font-black text-sm flex items-center gap-1.5">🚩 Report Issue / Request Test</div>
+                    <select id="repType" class="app-form-input">
+                        <option value="Test Request">Request New Test Series</option>
+                        <option value="Question Error">Question / Answer Mistake</option>
+                        <option value="PDF Error">Test PDF Not Opening</option>
+                        <option value="Login Issue">OTP / Login Issue</option>
+                        <option value="Feedback">Suggestion / Feedback</option>
+                    </select>
+                    <input id="repSubject" type="text" placeholder="Test Series / Exam Name (e.g. SSC GD Mock 05)" class="app-form-input">
+                    <textarea id="repMessage" rows="3" placeholder="Describe your request or issue here..." class="app-form-input"></textarea>
+                    <button onclick="submitUserReport()" class="btn-watch w-full py-3 text-xs">Send to Admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXAM COUNTDOWN MODAL -->
+    <div id="countdownModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="app-card w-full max-w-sm p-6 rounded-3xl shadow-2xl space-y-3">
+            <div class="flex justify-between items-center pb-2 border-b border-sky-200/60">
+                <h3 class="font-black text-base">🎯 Set Target Exam Countdown</h3>
+                <button onclick="closeCountdownModal()" class="text-slate-400 font-black text-lg bg-transparent border-0 cursor-pointer">✕</button>
+            </div>
+            <div><label class="text-xs font-extrabold opacity-75">Target Exam Name</label><input id="cdExamName" type="text" placeholder="e.g. SSC GD 2027" class="app-form-input mt-1"></div>
+            <div><label class="text-xs font-extrabold opacity-75">Exam Date</label><input id="cdExamDate" type="date" class="app-form-input mt-1"></div>
+            <button onclick="saveExamCountdown()" class="btn-watch w-full py-2.5 text-xs">💾 Save Target</button>
+        </div>
+    </div>
+
+    <!-- ORIGINAL 2-SLIDE PURPLE OTP LOGIN MODAL (100% UNCHANGED) -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3.5 hidden">
+        <div class="rwa-auth-card max-w-[390px] w-full animate-slideInSmooth">
+            <button id="otpBackArrowBtn" type="button" onclick="resetOtpModalToPhoneStep()" class="hidden absolute top-4 left-4 z-20 w-9 h-9 rounded-full bg-white shadow-md border border-purple-100 flex items-center justify-center text-slate-800 font-black text-base cursor-pointer hover:bg-purple-50" title="Back">←</button>
+            <button id="closeLoginModalBtn" type="button" onclick="closeLoginModal()" class="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/90 shadow-md border border-purple-100 flex items-center justify-center text-slate-500 hover:text-slate-800 font-black text-sm cursor-pointer" title="Close">✕</button>
+
+            <div class="pt-6 pb-2 px-6 text-center relative">
+                <div class="mx-auto w-28 h-16 flex items-center justify-center mb-1">
+                    <svg viewBox="0 0 160 95" class="w-full h-full drop-shadow-sm">
+                        <defs>
+                            <linearGradient id="rwaCapGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#4338ca"/></linearGradient>
+                            <linearGradient id="rwaBookGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#9333ea"/><stop offset="100%" stop-color="#2563eb"/></linearGradient>
+                        </defs>
+                        <path d="M28 75 C16 60 16 36 28 20" stroke="#9333ea" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/>
+                        <path d="M132 75 C144 60 144 36 132 20" stroke="#9333ea" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="4 3"/>
+                        <path d="M38 72 Q60 55 80 68 Q100 55 122 72" stroke="url(#rwaBookGrad)" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+                        <path d="M32 78 L128 78" stroke="#1e3a8a" stroke-width="4" stroke-linecap="round"/>
+                        <polygon points="80,8 38,26 80,42 122,26" fill="url(#rwaCapGrad)"/>
+                        <path d="M56 35 L56 50 Q80 60 104 50 L104 35" fill="#312e81"/>
+                        <line x1="112" y1="30" x2="112" y2="52" stroke="#4338ca" stroke-width="2.5"/>
+                        <circle cx="112" cy="54" r="3" fill="#9333ea"/>
+                    </svg>
+                </div>
+                <div class="flex items-center justify-center gap-1.5">
+                    <span class="text-xl font-black italic tracking-tight text-slate-900">TEST</span>
+                    <span class="px-3 py-0.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-lg font-black italic tracking-wide shadow-sm">PORTAL</span>
+                </div>
+                <p class="text-[11px] font-extrabold text-slate-600 mt-1 tracking-wide">Online Test Series &nbsp;|&nbsp; Notes &nbsp;|&nbsp; PDF</p>
+            </div>
+
+            <div class="w-full overflow-hidden leading-none -mt-1">
+                <svg viewBox="0 0 500 55" preserveAspectRatio="none" class="w-full h-7">
+                    <path d="M0,35 C150,65 330,-5 500,25 L500,55 L0,55 Z" fill="#ddd6fe" opacity="0.65"></path>
+                    <path d="M0,45 C180,10 340,60 500,20 L500,55 L0,55 Z" fill="#a855f7" opacity="0.35"></path>
+                </svg>
+            </div>
+
+            <div class="px-6 pt-2"><div id="loginStatusAlert" class="hidden mb-2 p-3 rounded-2xl text-xs font-extrabold text-center shadow-sm"></div></div>
+
+            <!-- SLIDE 1: MOBILE NUMBER -->
+            <div id="otpStepPhoneBox" class="px-6 pt-2 pb-6 space-y-4 rwa-slide-anim">
+                <div class="text-center">
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tight">Official Login</h3>
+                    <p class="text-xs font-extrabold text-slate-600 mt-1">आपके मोबाइल नंबर पर वेरिफिकेशन OTP भेजा जाएगा</p>
+                </div>
+                <div class="bg-white border-2 border-purple-200 focus-within:border-purple-600 rounded-2xl px-3.5 py-3 flex items-center gap-2.5 shadow-sm">
+                    <span class="text-lg leading-none select-none">📱</span>
+                    <span class="font-extrabold text-sm text-slate-800 flex items-center gap-1 select-none">+91 <span class="text-[10px] text-slate-500">▼</span></span>
+                    <span class="h-5 w-[1.5px] bg-slate-200"></span>
+                    <input id="loginPhoneInput" type="tel" maxlength="10" inputmode="numeric" placeholder="मोबाइल नंबर दर्ज करें" onkeydown="if(event.key==='Enter') sendLoginOtp()" class="w-full bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-400 outline-none">
+                </div>
+                <button id="btnSendOtp" type="button" onclick="sendLoginOtp()" class="rwa-purple-btn w-full py-3.5 text-base flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    <span>OTP भेजें</span>
+                </button>
+                <div class="grid grid-cols-3 gap-2.5 pt-2">
+                    <div class="bg-white border border-purple-100 rounded-2xl p-2.5 text-center shadow-sm"><div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto mb-1 text-base font-black">☑️</div><div class="text-[11px] font-extrabold text-slate-800">टेस्ट सीरीज़</div></div>
+                    <div class="bg-white border border-purple-100 rounded-2xl p-2.5 text-center shadow-sm"><div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto mb-1 text-base font-black">📄</div><div class="text-[11px] font-extrabold text-slate-800">नोट्स / PDF</div></div>
+                    <div class="bg-white border border-purple-100 rounded-2xl p-2.5 text-center shadow-sm"><div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto mb-1 text-base font-black">🏆</div><div class="text-[11px] font-extrabold text-slate-800">परिणाम विश्लेषण</div></div>
+                </div>
+            </div>
+
+            <!-- SLIDE 2: 4-BOX OTP VERIFICATION -->
+            <div id="otpStepVerifyBox" class="px-6 pt-2 pb-6 space-y-4 hidden rwa-slide-anim">
+                <div class="text-center">
+                    <h3 class="text-2xl font-black text-slate-900 tracking-tight">OTP सत्यापन</h3>
+                    <p class="text-xs font-extrabold text-slate-600 mt-1">आपके नंबर पर भेजा गया 4 अंकों का OTP दर्ज करें</p>
+                </div>
+                <div class="bg-purple-100/75 border border-purple-200 rounded-full px-4 py-2.5 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0"><span class="text-sm">📱</span><span id="otpSentPhoneDisplay" class="font-black text-sm text-slate-900 truncate">+91 98765 43210</span></div>
+                    <button type="button" onclick="resetOtpModalToPhoneStep()" class="flex items-center gap-1 text-purple-700 font-extrabold text-xs bg-transparent border-0 cursor-pointer shrink-0"><span>✎</span><span>बदलें</span></button>
+                </div>
+                <div class="flex items-center justify-center gap-3 pt-1">
+                    <input id="otpDigit0" type="tel" maxlength="1" inputmode="numeric" autocomplete="one-time-code" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(0, this)" onkeydown="handleOtpBoxKeydown(0, event)" onpaste="handleOtpPaste(event)">
+                    <input id="otpDigit1" type="tel" maxlength="1" inputmode="numeric" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(1, this)" onkeydown="handleOtpBoxKeydown(1, event)" onpaste="handleOtpPaste(event)">
+                    <input id="otpDigit2" type="tel" maxlength="1" inputmode="numeric" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(2, this)" onkeydown="handleOtpBoxKeydown(2, event)" onpaste="handleOtpPaste(event)">
+                    <input id="otpDigit3" type="tel" maxlength="1" inputmode="numeric" class="rwa-otp-digit-box" oninput="handleOtpBoxInput(3, this)" onkeydown="handleOtpBoxKeydown(3, event)" onpaste="handleOtpPaste(event)">
+                </div>
+                <input id="loginOtpInput" type="hidden">
+                <div class="text-center space-y-1">
+                    <div class="inline-flex items-center gap-1.5 text-xs font-extrabold text-slate-600"><span>🕒</span><span id="otpTimerLabelText">OTP मान्य है:</span><span id="otpTimerCountdown" class="text-purple-700 font-black">01:59</span></div>
+                    <div><button id="btnResendOtp" type="button" onclick="sendLoginOtp(true)" class="text-xs font-extrabold text-purple-700 underline bg-transparent border-0 cursor-pointer">🔄 OTP दोबारा भेजें (Resend OTP)</button></div>
+                </div>
+                <button id="btnVerifyOtp" type="button" onclick="verifyLoginOtp()" class="rwa-purple-btn w-full py-3.5 text-base flex items-center justify-center gap-2"><span>➔</span><span>लॉगिन करें</span></button>
+            </div>
+
+            <div class="w-full overflow-hidden leading-none">
+                <svg viewBox="0 0 500 45" preserveAspectRatio="none" class="w-full h-5">
+                    <path d="M0,15 C160,45 340,-5 500,20 L500,45 L0,45 Z" fill="#a855f7" opacity="0.35"></path>
+                    <path d="M0,28 C200,5 350,45 500,15 L500,45 L0,45 Z" fill="#7e22ce" opacity="0.5"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- STYLE #5 UNIFIED LIVE BAR CLOCK ENGINE -->
+    <script>
+        (function startUnifiedLiveClock() {
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            function tick() {
+                const now = new Date();
+                const dEl = document.getElementById("hdrClockDate");
+                const tEl = document.getElementById("hdrClockTime");
+                if (!dEl || !tEl) return;
+                const day = String(now.getDate()).padStart(2, "0");
+                const mon = months[now.getMonth()];
+                let hrs = now.getHours();
+                const ampm = hrs >= 12 ? "PM" : "AM";
+                hrs = hrs % 12 || 12;
+                dEl.textContent = `${day} ${mon}`;
+                tEl.textContent = `${String(hrs).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")} ${ampm}`;
+            }
+            tick();
+            setInterval(tick, 1000);
+        })();
+    </script>
+
+    <!-- DYNAMIC CACHE-BUSTING SCRIPT LOADER -->
+    <script>
+        (function loadFreshScripts() {
+            const bust = "v=" + Date.now();
+            const load = (src, cb) => {
+                const s = document.createElement("script");
+                s.src = src + "?" + bust;
+                if (cb) s.onload = cb;
+                document.body.appendChild(s);
+            };
+            load("rwa-security.js", () => {
+                load("pro-ts-suite.js", () => {
+                    load("app.js", () => {
+                        load("tcs-engine.js");
+                    });
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
